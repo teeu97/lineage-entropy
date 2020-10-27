@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 from SequenceDecomplexationOptimized import Functions
 
-reference_table = pd.DataFrame(pickle.load(open('190812_finished_cutlow_table.pickle', 'rb'))).copy(deep=True)
+reference_table = pd.DataFrame(pickle.load(open('190812_finished_table.pickle', 'rb'))).copy(deep=True)
 additional_table = pd.DataFrame(pickle.load(open('191003Gar.fastq_raw_read_correct.pickle', 'rb')))[:-1].transpose()
 
 sum_additional_table = additional_table.sum(axis=0)
