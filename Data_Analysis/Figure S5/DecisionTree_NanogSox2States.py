@@ -2,17 +2,10 @@ import pickle
 import math
 import numpy as np
 import matplotlib
-import pandas as pd
-import copy
+import networkx as nx
+import matplotlib.pyplot as plt
 
-font = {'family': 'normal',
-        'weight': 'bold',
-        'size': 16}
-
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+from networkx.drawing.nx_pydot import graphviz_layout
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -21,14 +14,6 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-
-top_right_coord = (10, 10)
-top_left_coord = (0, 10)
-bottom_left_coord = (0, 0)
-
-triangle_vertices = np.array([top_right_coord, top_left_coord, bottom_left_coord])
-
-empirical_stochasticity = {i: [] for i in range(5)}
 
 total_cell_number = 10 ** 8
 
@@ -57,8 +42,8 @@ all_size_set = set()
 all_vector_size_set = set()
 all_barcode_list = []
 
-top_right_coord = (10, 10)
-top_left_coord = (0, 10)
+top_right_coord = (1, 1)
+top_left_coord = (0, 1)
 bottom_left_coord = (0, 0)
 
 triangle_vertices = np.array([top_right_coord, top_left_coord, bottom_left_coord])
@@ -73,16 +58,15 @@ for barcode, row in true_number_table.iterrows():
     barcode_dict['d24_all'], barcode_dict['d24_s1'], barcode_dict['d24_s2'], barcode_dict['d24_s3'] = row[36:40]
 
     barcode_summary = {'ternary_coord': [], 'cartesian_coord': [], 'vector': [], 'size': [], 'assigned_state': [],
-                       'transition_amount': [], 'monte_ternary_coord': [], 'monte_cartesian_coord': [], 'monte_vector': [],
-                       'timepoint_size': [], 'total_transition_amount': 0, 'proportion_diff': [],
-                       'assigned_motility_state': []}
+                       'vector_size': [], 'monte_ternary_coord': [], 'monte_cartesian_coord': [], 'monte_vector': [],
+                       'timepoint_size': [], 'total_transition_amount': 0, 'total_size': 0}
 
     barcode_size = [sum(row[1:4]), sum(row[5:8]), sum(row[21:24]), sum(row[33:36]), sum(row[37:40])]
 
     for timepoint in timepoints:
         timepoint_all_present = all(barcode_size)
         timepoint_total = sum([barcode_dict[timepoint + '_' + state] for state in states])
-        if timepoint_all_present:
+        if timepoint_total:
             timepoint_size = []
             ternary_coord = []
             cell_number = []
@@ -108,24 +92,15 @@ for barcode, row in true_number_table.iterrows():
                                               barcode_summary['cartesian_coord'][i][0],
                                               barcode_summary['cartesian_coord'][i + 1][1] -
                                               barcode_summary['cartesian_coord'][i][1]))
-            barcode_summary['proportion_diff'].append(tuple(
-                np.array(barcode_summary['ternary_coord'][i + 1]) - np.array(barcode_summary['ternary_coord'][i])))
-            barcode_summary['transition_amount'].append(
+            barcode_summary['vector_size'].append(
                 vector_size(barcode_summary['vector'][i][0], barcode_summary['vector'][i][1]))
-
         for size in barcode_summary['size']:
             all_size_set.add(round(size, 3))
-        for size_ in barcode_summary['transition_amount']:
+            barcode_summary['total_size'] += size
+        for size_ in barcode_summary['vector_size']:
             all_vector_size_set.add(round(size_, 3))
         all_barcode_list.append(barcode_summary)
 
-for transition in range(4):
-    all_barcode_list.sort(key=lambda barcode: barcode['transition_amount'][transition], reverse=True)
-    for index, barcode in enumerate(all_barcode_list):
-        if index <= int(0.2*len(all_barcode_list)):
-            barcode['assigned_motility_state'].append(1)  # change state
-        else:
-            barcode['assigned_motility_state'].append(0)  # stay
 
 class ProbabilityTree():
     def __init__(self, initial_state=None, timepoint=0):
@@ -137,12 +112,12 @@ class ProbabilityTree():
         else:
             self.state_history = initial_state
 
-        if self.timepoint < 4:
+        if self.timepoint < 5:
             self.states = [ProbabilityTree(self.get_state_history() + [i + 1], self.get_timepoint() + 1) for i in
-                           range(2)]
-            self.barcodes = [[] for i in range(2)]
-            self.probabilities = [0 for i in range(2)]
-            self.children_lineage_numbers = [0 for i in range(2)]
+                           range(3)]
+            self.barcodes = [[] for i in range(3)]
+            self.probabilities = [0 for i in range(3)]
+            self.children_lineage_numbers = [0 for i in range(3)]
         else:
             self.states = None
             self.barcodes = None
@@ -187,9 +162,9 @@ class ProbabilityTree():
 
     def update(self, barcode_list):
         self.total = len(barcode_list)
-        if self.timepoint < 4:
+        if self.timepoint < 5:
             for barcode in barcode_list:
-                self.barcodes[barcode['assigned_motility_state'][self.timepoint]].append(barcode)
+                self.barcodes[barcode['assigned_state'][self.timepoint]].append(barcode)
             for index, state in enumerate(self.get_children()):
                 state.update(self.barcodes[index])
                 if self.get_total():
@@ -199,7 +174,7 @@ class ProbabilityTree():
                     self.probabilities[index] = 0
 
     def generate_tree_str(self):
-        if self.get_timepoint() == 4:
+        if self.get_timepoint() == 5:
             tree_str = ''.join([str(s) for s in self.get_state_history()])
             return tree_str
         else:
@@ -211,36 +186,49 @@ class ProbabilityTree():
             tree_str += ')'
             return tree_str
 
+
 p = ProbabilityTree()
 p.update(all_barcode_list)
 
-motif_pattern = {}
+probability_dict = {i: [] for i in range(6)}
+number_dict = {i: [] for i in range(6)}
 
-def generate_probability_matrix(p, info=None):
+
+def generate_probability_igraph(p):
     timepoint = p.get_timepoint()
-    if info == None:
-        info = {'Conditional Probability': [], 'Total Probability': 1, 'Number of Lineages': 0}
-
+    probability_dict[timepoint] += p.get_probability()
+    number_dict[timepoint] += p.get_children_lineage_number()
     if timepoint < 4:
-        for index, child in enumerate(p.get_children()):
-            info_copy = copy.deepcopy(info)
-            info['Total Probability'] *= p.get_probability()[index]
-            info['Conditional Probability'].append(p.get_probability()[index])
-            generate_probability_matrix(child, info)
-            info = info_copy
-    else:
-        info['Number of Lineages'] = p.get_total()
-        motif_pattern[tuple(p.get_state_history())] = info
+        for child in p.get_children():
+            generate_probability_igraph(child)
 
-def generate_dataframe(motif_matrix):
-    pd_dict = {'State History': [], 'Conditional Probability': [], 'Total Probability': [], 'Number of Lineages': []}
-    for pattern in motif_matrix:
-        pd_dict['State History'].append(pattern)
-        for property in motif_matrix[pattern]:
-            pd_dict[property].append(motif_matrix[pattern][property])
-    return pd_dict
 
-generate_probability_matrix(p)
-pd_dict = generate_dataframe(motif_pattern)
-df = pd.DataFrame.from_dict(pd_dict)
-df.to_csv('Decision_Tree_MotilityState_Percentile_Matrix.csv')
+generate_probability_igraph(p)
+
+prob_list = list(probability_dict.values())
+prob_list_ready = []
+number_list = list(number_dict.values())
+number_list_ready = []
+for item in prob_list:
+    prob_list_ready += item
+prob_list_ready = list(np.round(prob_list_ready, 2))
+for item in number_list:
+    number_list_ready += item
+
+prob_number_list_ready = [(x, y) for x, y in zip(prob_list_ready, number_list_ready)]
+
+G = nx.balanced_tree(3, 5)
+node_color_list = ['black'] + ['#FFA6B3', '#80D4FF', '#C3DF86'] * (sum(3**i for i in range(0, 5)))
+edge_color_list = ['#FFA6B3', '#80D4FF', '#C3DF86'] * (sum(3**i for i in range(0, 5)))
+
+edge_labels_large = {edge: prob_num for edge, prob_num in zip(list(G.edges)[:120], prob_number_list_ready[:120])}
+edge_labels_small = {edge: prob_num for edge, prob_num in zip(list(G.edges)[120:], prob_number_list_ready[120:])}
+weights = np.array([prob[0] for prob in prob_number_list_ready])*5+1
+
+pos = graphviz_layout(G, prog="twopi")
+plt.figure(figsize=(20, 20))
+nx.draw(G, pos, alpha=1, node_size=200, node_color=color_list, with_labels=False, width=weights, edge_color=edge_color_list)
+nx.draw_networkx_edge_labels(G, pos, edge_labels_large, font_size=15, label_pos=0.45, bbox=dict(facecolor='white', edgecolor='none', pad=0.0))
+nx.draw_networkx_edge_labels(G, pos, edge_labels_small, font_size=10, label_pos=0.35, bbox=dict(facecolor='white', edgecolor='none', pad=0.0))
+plt.axis("equal")
+plt.savefig('Decision_Tree_Networkx.svg', format='svg', dpi=720)

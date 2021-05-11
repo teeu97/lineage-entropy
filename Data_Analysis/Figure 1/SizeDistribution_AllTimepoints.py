@@ -1,22 +1,30 @@
+"""
+This file produces a histogram that shows the distribution of lineage sizes across all lineages and all timepoints.
+"""
+
 import pickle
 import pandas as pd
-import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 
-matplotlib.rcParams['font.sans-serif'] = "Arial"
-matplotlib.rcParams['font.family'] = "sans-serif"
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
+
+# normalizing factor for the normalization
 total_cell_number = 10**8
 
 state_1_ratio = 0.90
 state_2_ratio = 0.05
 state_3_ratio = 0.05
 
-state_1_number = state_1_ratio * total_cell_number
-state_2_number = state_2_ratio * total_cell_number
-state_3_number = state_3_ratio * total_cell_number
+state_1_number = state_1_ratio * total_cell_number  # normalize state 1 cells to 9*10^7 cells
+state_2_number = state_2_ratio * total_cell_number  # normalize state 2 cells to 5*10^6 cells
+state_3_number = state_3_ratio * total_cell_number  # normalize state 3 cells to 9*10^6 cells
 
+# Put these normalizing
 normalizing_factor = [total_cell_number, state_1_number, state_2_number, state_3_number] * 10
 
 table = pickle.load(open('191012_finished_table.pickle', 'rb'))

@@ -1,12 +1,11 @@
 import pickle
 import math
-import random
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-
 from matplotlib import cm
-from tqdm.auto import tqdm
+
+fig_dict = []
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -108,15 +107,18 @@ for barcode, row in true_number_table.iterrows():
 
 transitions = ['t{}'.format(i) for i in range(4)]
 
+
 def creating_dict(i, states):
     if i == 5:
         return {'barcode': []}
     else:
-        updated_dict = {'t{}'.format(i):{state: creating_dict(i+1, states) for state in states}}
+        updated_dict = {'t{}'.format(i): {state: creating_dict(i + 1, states) for state in states}}
         updated_dict['t{}'.format(i)].update({'barcode': []})
         return updated_dict
 
+
 test_dict = creating_dict(0, states)
+
 
 def fill_dict(test_dict, i, barcode_list):
     if i == 5:
@@ -129,40 +131,75 @@ def fill_dict(test_dict, i, barcode_list):
             barcode_allocation_list[barcode['assigned_state'][i]].append(barcode)
             test_dict['t{}'.format(i)]['barcode'].append(barcode)
         for index, state in enumerate(states):
-            test_dict['t{}'.format(i)][state] = fill_dict(test_dict['t{}'.format(i)][state], i+1, barcode_allocation_list[index])
+            test_dict['t{}'.format(i)][state] = fill_dict(test_dict['t{}'.format(i)][state], i + 1,
+                                                          barcode_allocation_list[index])
         return test_dict
+
 
 test_dict = fill_dict(test_dict, 0, all_barcode_list)
 
-def following_bundle(test_dict, state_list=[], i=1):
-    color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin = 1, vmax = max(all_size_set)), cmap='YlOrRd')
-    if i == 4:
-        fig, ax = plt.subplots()
-        barcode_list = test_dict['t{}'.format(i)]['barcode']
+
+def following_bundle(test_dict, state_list, original_state, irow=1, icol=1):
+    color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=1, vmax=max(all_size_set)),
+                                                   cmap='YlOrRd')
+    if icol == 4:
+        ax = fig_dict[original_state][(irow, icol - 1)]
+        barcode_list = test_dict['t{}'.format(icol)]['barcode']
         for barcode in barcode_list:
             vector = barcode['vector']
             size = barcode['size']
-            barcode_color = color_scalarMap.to_rgba(round(size[i], 3))
+            barcode_color = color_scalarMap.to_rgba(round(size[icol], 3))
             ax.axis([-1.2, 1.2, -1.2, 1.2])
-            ax.axis('off')
-            ax.arrow(0, 0, vector[i-1][0], vector[i-1][1], shape='full', head_width=0.01, color=barcode_color)
-        plt.savefig('FollowingBundle_{}_{}.svg'.format(str(state_list), i), format='svg', dpi=720, bbox_inches='tight')
-        plt.close()
+            ax.arrow(0, 0, vector[icol - 1][0], vector[icol - 1][1], shape='full', head_width=0.01, color=barcode_color)
+
     else:
-        fig, ax = plt.subplots()
-        barcode_list = test_dict['t{}'.format(i)]['barcode']
+        ax = fig_dict[original_state][(irow, icol - 1)]
+        barcode_list = test_dict['t{}'.format(icol)]['barcode']
         for barcode in barcode_list:
             vector = barcode['vector']
             size = barcode['size']
-            barcode_color = color_scalarMap.to_rgba(round(size[i], 3))
+            barcode_color = color_scalarMap.to_rgba(round(size[icol], 3))
             ax.axis([-1.2, 1.2, -1.2, 1.2])
-            ax.axis('off')
-            ax.arrow(0, 0, vector[i-1][0], vector[i-1][1], shape='full', head_width=0.01, color=barcode_color)
-        plt.savefig('FollowingBundle_{}_{}.svg'.format(str(state_list), i), format='svg', dpi=720, bbox_inches='tight')
-        plt.close()
-        for state in states:
-            following_bundle(test_dict['t{}'.format(i)][state], state_list + [state], i+1)
+            ax.arrow(0, 0, vector[icol - 1][0], vector[icol - 1][1], shape='full', head_width=0.01, color=barcode_color)
 
-for state in states:
-    following_bundle(test_dict['t0'][state], [state])
+        for istate, state in enumerate(states):
+            following_bundle(test_dict['t{}'.format(icol)][state], state_list + [state], original_state,
+                             3 * irow + istate, icol + 1)
 
+
+for istate, state in enumerate(states):
+    fig = plt.figure(figsize=(10, 19))
+    gs = fig.add_gridspec(3 ** 4, 4)
+    ax_dict = {}
+    for icol in range(4):
+        for irow in range(3 ** (icol)):
+            interval_length = 3 ** (3 - icol)
+            ax = fig.add_subplot(gs[(interval_length * irow):(interval_length * (irow + 1)), icol])
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            if icol > 0:
+                if irow % 3 == 1:
+                    ax.patch.set_facecolor('#80D4FF')
+                elif irow % 3 == 2:
+                    ax.patch.set_facecolor('#C3DF86')
+                else:
+                    ax.patch.set_facecolor('#FFA6B3')
+            else:
+                if istate % 3 == 1:
+                    ax.patch.set_facecolor('#80D4FF')
+                elif istate % 3 == 2:
+                    ax.patch.set_facecolor('#C3DF86')
+                else:
+                    ax.patch.set_facecolor('#FFA6B3')
+
+            ax.patch.set_alpha(0.5)
+            ax.set_aspect(1, anchor='C')
+
+            ax_dict[(irow, icol)] = ax
+    fig_dict.append(ax_dict)
+
+    plt.subplots_adjust(wspace=0, hspace=0)
+
+    following_bundle(test_dict['t0'][state], [state], istate, 0)
+    plt.savefig('FollowingBundle_Test_{}.tiff'.format(istate), format='tiff', dpi=720)
