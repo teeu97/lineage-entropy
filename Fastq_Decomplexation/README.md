@@ -8,6 +8,7 @@
 2. Check read quality, collapse reads, and put them in a contingency-table-like data structure using **SequenceDecomplexationOptimized.py**. 
         
 **Recommendation**: Please install parallel function to help with this multithreading. For mac users, you can use [Homebrew](https://brew.sh/) `brew install parallel`. Then run `parallel SequenceDecomplexationOptimized.py ::: group*.fastq`. 
+
 3. Collapse multiple contingency tables into one file by running **SequenceDecomplexationTable.py**. 
 4. **(Only for the first experiment)** Please run **SequenceDecomplexationTableExtra.py** to improve the qualities of some reads. 
 5. The resulting pickle and csv files are ready for the subsequent downstream analyses. 
