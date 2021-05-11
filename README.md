@@ -20,8 +20,14 @@ Welcome to the "lineage-entropy" GitHub repository! We are so excited to have yo
 	- networkx
 	- scipy
 	- rpy2
+  
   by typing `pip install numpy scipy pandas seaborn biopython python-igraph graphviz networkx scipy rpy2` into your terminal or command prompt **if you do not use conda environment**.
   **For conda environment,** you can use command `conda install numpy scipy pandas seaborn biopython python-igraph graphviz networkx scipy rpy2`.   
 3. - If you want to analyze FASTQ files, you can navigate to **Fastq_Decomplexation** folder. Instructions for analysis can be found inside. 
    - If you want to work with already decomplexed files, please go to **Pickle_Files** folder and download pickle files there. These pickle files only contain scientific data related to this experiment; they will not harm your computer. 
-4. Download python files in **Data_Analysis** folder to the same directory that contains the decomplexed FASTQ files (pickle files.) 
+4. Download python files in **Data_Analysis** folder to the same directory that contains the decomplexed FASTQ files (pickle files.)
+5. Have fun analyzing data!
+
+If you encounter any problems or have any question, please contact Tee Udomlumleart (teeu@mit.edu). 
+
+Created and maintained by Tee Udomlumleart. Last update 5/11/2021. 
