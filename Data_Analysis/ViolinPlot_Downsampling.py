@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
+from matplotlib import ticker as mticker
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -80,7 +82,7 @@ for percentage in percentages:
         for timepoint in timepoints:
             timepoint_all_present = all(barcode_size)
             timepoint_total = sum([barcode_dict[timepoint + '_' + state] for state in states])
-            if timepoint_total > 10:
+            if timepoint_total:
                 ternary_coord = []
                 dist = []
                 for state in states:
@@ -132,18 +134,20 @@ ax.xaxis.set_ticks_position('bottom')
 ax.set_xticks(np.arange(1, 10))
 ax.set_xticklabels(percentages)
 ax.set_xlim(0.25, len(percentages) + 0.75)
-plt.savefig('ViolinPlot_Downsampling_TransitionPercent.svg', bbox_inches='tight', format='svg', dpi=720)
+plt.savefig('ViolinPlot_Downsampling_TransitionPercent.tiff', bbox_inches='tight', format='tiff', dpi=720)
 
 fig = plt.figure()
 ax = plt.axes()
 ax.set_ylim(bottom=0, top=7)
-ax.set_title('Distribution of Log Lineage Size')
-ax.set_ylabel('Log Lineage Size')
+ax.set_title('Distribution of Lineage Size')
+ax.set_ylabel('Lineage Size')
 ax.set_xlabel('Percent Sampling')
+ax.yaxis.set_major_formatter(mticker.StrMethodFormatter("$10^{{{x:.0f}}}$"))
+ax.yaxis.set_ticks([np.log10(x) for p in range(0,6) for x in np.linspace(10**p, 10**(p+1), 10)], minor=True)
 ax.violinplot(y_data_sizes, showmedians=True)
 ax.get_xaxis().set_tick_params(direction='out')
 ax.xaxis.set_ticks_position('bottom')
 ax.set_xticks(np.arange(1, 10))
 ax.set_xticklabels(percentages)
 ax.set_xlim(0.25, len(percentages) + 0.75)
-plt.savefig("ViolinPlot_Downsampling_LineageSize.svg", bbox_inches='tight', format='svg', dpi=720)
+plt.savefig("ViolinPlot_Downsampling_LineageSize.tiff", bbox_inches='tight', format='tiff', dpi=720)

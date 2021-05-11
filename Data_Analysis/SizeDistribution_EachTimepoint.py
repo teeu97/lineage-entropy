@@ -38,24 +38,16 @@ for barcode, row in true_number_table.iterrows():
 
 df_all_barcode_number_list = pd.DataFrame(all_barcode_number_list, columns=['Day {}'.format(i*6) for i in range(5)])
 
-fig, axes = plt.subplots(2, 3, sharex=True, sharey=True, figsize=[12, 8])
-bins = 10 ** (np.arange(0, 7, 0.1))
-for iy in range(2):
-    for ix in range(3):
-        index = 3 * iy + ix
-        ax = axes[iy, ix]
+for index in range(5):
+    fig, ax = plt.subplots()
+    bins = 10 ** (np.arange(0, 7, 0.1))
 
-        if index == 5:
-            ax.axis('off')
-            break
+    timepoint = 'Day {}'.format(6 * index)
 
-        timepoint = 'Day {}'.format(6 * index)
+    ax.hist(df_all_barcode_number_list[timepoint], bins=bins)
+    ax.set_xscale('log')
+    ax.set_title(timepoint)
 
-        ax.hist(df_all_barcode_number_list[timepoint], bins=bins)
-        ax.set_xscale('log')
-        ax.set_title(timepoint)
-
-fig.suptitle('Size Distribution in Different Timepoints', size='x-large', y=0.95)
-fig.text(0.5, 0.04, '$\log_{10}$ Lineage Size', ha='center', va='center', size='x-large')
-fig.text(0.06, 0.5, 'Number of Lineages', ha='center', va='center', rotation='vertical', size='x-large')
-plt.savefig('SizeDistribution_EachTimepoint.svg', bbox_inches='tight', format='svg', dpi=720)
+    fig.text(0.5, 0.04, '$\log_{10}$ Lineage Size', ha='center', va='center', size='x-large')
+    fig.text(0.06, 0.5, 'Number of Lineages', ha='center', va='center', rotation='vertical', size='x-large')
+    plt.savefig('SizeDistribution_EachTimepoint_{}.svg'.format(timepoint), bbox_inches='tight', format='svg', dpi=720)

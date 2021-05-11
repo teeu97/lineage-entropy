@@ -9,17 +9,15 @@ import matplotlib.animation as animation
 from numpy.linalg import pinv
 from matplotlib import cm
 
+matplotlib.rcParams['font.sans-serif'] = "Helvetica"
+matplotlib.rcParams['font.family'] = "sans-serif"
+
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
 
 
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
-
-
-matplotlib.rcParams['figure.dpi'] = 1200
-matplotlib.rcParams['figure.figsize'] = (6, 6)
-matplotlib.rcParams['font.family'] = "sans-serif"
 
 total_cell_number = 10 ** 8
 
@@ -232,4 +230,4 @@ cbar.ax.set_xticklabels(['Lowest Motility', 'Medium Motility', 'Highest Motility
 anim = animation.FuncAnimation(fig, animate, init_func=init, frames=400, interval=20, blit=True)
 writer_ = animation.FFMpegWriter(fps=24, codec='h264')
 
-anim.save('TransitionVideo_MonteCarloSimulation.mp4', writer=writer_, dpi=720, savefig_kwargs={'bbox_inches': 'tight'})
+anim.save('TransitionVideo_MonteCarloSimulation.mp4', writer=writer_, dpi=720, savefig_kwargs={'bbox_inches': 0})

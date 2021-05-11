@@ -88,6 +88,7 @@ for barcode, row in true_number_table.iterrows():
 
             for state_coord in triangle_vertices:
                 dist.append(euclidean_distance(cartesian_coord, state_coord))
+
             barcode_summary['assigned_state'].append(dist.index(min(dist)))
 
             barcode_summary['size'].append(timepoint_total)

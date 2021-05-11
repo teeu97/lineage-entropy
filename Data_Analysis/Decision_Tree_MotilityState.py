@@ -242,12 +242,16 @@ prob_number_list_ready = [(x, y) for x, y in zip(prob_list_ready, number_list_re
 
 
 G = nx.balanced_tree(2, 4)
-color_list = ["black"] + ["#AD393D", "#518066"] * (sum(2**i for i in range(0, 4))) # red = stay, green = change
+node_color_list = ["black"] + ["#AD393D", "#518066"] * (sum(2**i for i in range(0, 4))) # red = stay, green = change
+edge_color_list = ["#AD393D", "#518066"] * (sum(2**i for i in range(0, 4)))
+
 edge_labels = {edge: prob_num for edge, prob_num in zip(G.edges, prob_number_list_ready)}
+weights = np.array([prob[0] for prob in prob_number_list_ready])*5+1
+
 vertex_labels = {vertex: index for index, vertex in enumerate(G.nodes)}
 pos = graphviz_layout(G, prog="twopi")
 plt.figure(figsize=(20, 20))
-nx.draw(G, pos, alpha=1, node_size=50, node_color=color_list, with_labels=False)
-nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=20, label_pos=0.35)
+nx.draw(G, pos, alpha=1, node_size=200, node_color=node_color_list, with_labels=False, width=weights, edge_color=edge_color_list)
+nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=20, label_pos=0.45)
 plt.axis("equal")
-plt.savefig('Decision_Tree_MotilityState_Networkx.png', format='png', dpi=720)
+plt.savefig('Decision_Tree_MotilityState_Networkx.tiff', format='tiff', dpi=720)

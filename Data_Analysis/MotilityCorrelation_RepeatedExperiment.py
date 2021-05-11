@@ -188,13 +188,13 @@ def correlation_WT():
         slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
         rho, p_ = scipy.stats.spearmanr(x, y)
 
-        ax.plot(np.arange(0, max(x), 0.0001), intercept + slope * np.arange(0, max(x), 0.0001), color='red')
-        ax.scatter(x, y, marker='.', color='blue')
+        ax.plot(np.arange(0, max(x), 0.0001), intercept + slope * np.arange(0, max(x), 0.0001), color='#202020')
+        ax.scatter(x, y, marker='.', color='#696969')
         print('transition', round(r, 3), round(r**2, 3))
         ax.set_ylim(0, max(y) + 0.05)
         ax.set_xlim(0, max(x) + 0.05)
 
-        plt.savefig("MotilityCorrelation_RepeatedExperiment_TwoSamples_{}.svg".format(transition), bbox_inches='tight', format='svg', dpi=720)
+        plt.savefig("MotilityCorrelation_RepeatedExperiment_TwoSamples_{}.tiff".format(transition), bbox_inches='tight', format='tiff', dpi=720)
         plt.close()
 
 def correlation_randomized_WT():
@@ -251,13 +251,13 @@ def correlation_randomized_WT():
         slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
         rho, p_ = scipy.stats.spearmanr(x, y)
 
-        ax.plot(np.arange(0, max(x), 0.0001), intercept + slope * np.arange(0, max(x), 0.0001), color='red')
-        ax.scatter(x, y, marker='.', color='blue')
+        ax.plot(np.arange(0, max(x), 0.0001), intercept + slope * np.arange(0, max(x), 0.0001), color='#202020')
+        ax.scatter(x, y, marker='.', color='#696969')
         print(transition, round(r, 3), round(r**2, 3))
         # ax.text(0, 1.5, 'r={}, rho={}'.format(round(r, 3), round(rho, 3)))
         ax.set_ylim(0, max(y) + 0.05)
         ax.set_xlim(0, max(x) + 0.05)
-        plt.savefig("MotilityCorrelation_RepeatedExperiment_Control_{}.svg".format(transition), bbox_inches='tight', format='svg', dpi=720)
+        plt.savefig("MotilityCorrelation_RepeatedExperiment_Control_{}.tiff".format(transition), bbox_inches='tight', format='tiff', dpi=720)
         plt.close()
 
 def correlation_randomized_WT_p():
@@ -303,13 +303,9 @@ def correlation_randomized_WT_p():
             rho_list[transition].append(rho)
             r_list[transition].append(r)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, sharex=True, sharey=True, figsize=[8 * 2, 6])
-    ax1.violinplot(r_list, vert=True, showmeans=True, showmedians=True)
-    ax1.set_title('r values')
-    ax2.violinplot(rho_list, vert=True, showmeans=True, showmedians=True)
-    ax2.set_title('rho values')
-
-    plt.savefig("MotilityCorrelation_RepeatedExperiment_Control_SignificantValue.svg", bbox_inches='tight', format='svg', dpi=720)
+    for x in r_list:
+        print('mean', np.mean(x))
+        print('std', np.std(x))
 
 correlation_randomized_WT()
 correlation_WT()

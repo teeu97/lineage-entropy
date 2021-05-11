@@ -7,6 +7,9 @@ import matplotlib.animation as animation
 
 from matplotlib import cm
 
+matplotlib.rcParams['font.sans-serif'] = "Helvetica"
+matplotlib.rcParams['font.family'] = "sans-serif"
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -172,4 +175,4 @@ cbar.ax.set_xticklabels(['Lowest Motility', 'Medium Motility', 'Highest Motility
 anim = animation.FuncAnimation(fig, animate, init_func=init, frames=400, interval=20, blit=True)
 writer_ = animation.FFMpegWriter(fps=24, codec='h264')
 
-anim.save('TransitionVideo_Empirical.mp4', writer=writer_, dpi=720, savefig_kwargs={'bbox_inches': 'tight'})
+anim.save('TransitionVideo_Empirical.mp4', writer=writer_, dpi=720, savefig_kwargs={'bbox_inches': 0})

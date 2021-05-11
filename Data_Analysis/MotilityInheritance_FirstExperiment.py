@@ -115,8 +115,8 @@ def motility_super_switcher_histogram_all(all_barcode_list):
             motility = barcode['transition_amount'][transition]
             data[int(index / len(all_barcode_list) * 10)].append(motility * 100 / math.sqrt(2))
 
-        ax.hist(data, stacked=True, histtype='barstacked', bins=np.arange(0, 105, 5), color=rainbow_list)
+        ax.hist(data, stacked=True, log=True, histtype='barstacked', bins=np.arange(0, 105, 5), color=rainbow_list)
 
-        plt.savefig("MotilityInheritance_FirstExperiment_T{}.svg".format(transition), format='svg', bbox_inches='tight', dpi=720)
+        plt.savefig("MotilityInheritance_FirstExperiment_Log_T{}.svg".format(transition), format='svg', bbox_inches='tight', dpi=720)
 
 motility_super_switcher_histogram_all(all_barcode_list)

@@ -45,7 +45,8 @@ normalized_table = table.div(sum_table)
 true_number_table = (normalized_table * normalizing_factor).round()
 
 normalized_table_2 = table.div(sum_table)
-normalizing_factor_2 = [0, 108703, 119310, 173167, 0, 131053, 131434, 100338, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 283972, 297429, 285009, 0, 0, 0, 0, 0, 0, 0, 0, 0, 283771, 310282, 285815, 0, 288557, 329323, 184856]
+# normalizing_factor_2 = [0, 108703, 119310, 173167, 0, 131053, 131434, 100338, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 283972, 297429, 285009, 0, 0, 0, 0, 0, 0, 0, 0, 0, 283771, 310282, 285815, 0, 288557, 329323, 184856]
+normalizing_factor_2 = normalizing_factor
 true_number_table_2 = (normalized_table_2 * normalizing_factor_2).round()
 
 states = ['s1', 's2', 's3']
@@ -81,7 +82,7 @@ for barcode, row in true_number_table.iterrows():
     for timepoint in timepoints:
         timepoint_all_present = all(barcode_size)
         timepoint_total = sum([barcode_dict[timepoint + '_' + state] for state in states])
-        if timepoint_total > 10:
+        if timepoint_total:
             ternary_coord = []
             dist = []
             for state in states:
@@ -123,13 +124,32 @@ for state in states:
         for j in range(5)]
     motility_size_group = [[] for i in range(5)]
 
+    number_small = 0
+    number_large = 0
+
     for index, group in enumerate(motility_group):
         for barcode in group:
             motility_size_group[index].append(barcode['{}_cells'.format(state)])
 
-    bins = [5 * (10 ** i) for i in range(-3, 4, 1)]
+    bins = [5 * (10 ** i) for i in range(0, 6, 1)]
+
+    for barcode in all_barcode_list:
+        if barcode['{}_cells'.format(state)] < bins[-2]:
+            number_small += 1
+            continue
+        else:
+            number_large += 1
+            continue
+
+    print(number_small, number_large)
 
     histogram_group = [np.histogram(group, bins)[0] for group in motility_size_group]
+    print(histogram_group)
+    total_lineage = [0 for i in range(5)]
+    for group in histogram_group:
+        for i, size in enumerate(group):
+            total_lineage[i] += size
+    print(total_lineage)
 
     histogram_group_df = pd.DataFrame(histogram_group)
     total = histogram_group_df.sum(axis=0)
@@ -139,8 +159,9 @@ for state in states:
     rainbow_list = rainbow(range(5))
 
     bar_width = 0.85
-    names = [-2, -1, 0, 1, 2, 3]
+    names = [i for i in range(0, 5)]
     x = [i for i in range(len(names))]
+
     for i in range(5):
         if i == 0:
             plt.bar(x, histogram_percentage_df.iloc[i, :], color=rainbow_list[i], width=bar_width)
@@ -154,5 +175,5 @@ for state in states:
     plt.xlabel('Log Average Population Size')
     plt.ylabel('Proportion of Cells')
 
-    plt.savefig("StackedBarPlot_Motility_{}.svg".format(state), bbox_inches=0, format='svg', dpi=720)
-    plt.close()
+    # plt.savefig("StackedBarPlot_Motility_{}.svg".format(state), bbox_inches=0, format='svg', dpi=720)
+    # plt.close()

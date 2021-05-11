@@ -33,7 +33,7 @@ plt.colorbar(
     label='Percentile of Motility',
 )
 plt.axis('off')
-plt.savefig('Colorbar_DiscreteMotility_Vertical.svg', dpi=720, format='svg', bbox_inches='tight')
+plt.savefig('Colorbar_DiscreteMotility_Vertical.tiff', dpi=720, format='tiff', bbox_inches='tight')
 plt.close()
 
 plt.figure()
@@ -48,5 +48,5 @@ plt.colorbar(
     label='Percentile of Motility',
 )
 plt.axis('off')
-plt.savefig('Colorbar_DiscreteMotility_Horizontal.svg', dpi=720, format='svg', bbox_inches='tight')
+plt.savefig('Colorbar_DiscreteMotility_Horizontal.tiff', dpi=720, format='tiff', bbox_inches='tight')
 plt.close()

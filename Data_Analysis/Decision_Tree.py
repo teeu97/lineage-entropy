@@ -1,12 +1,10 @@
 import pickle
 import math
 import numpy as np
-import matplotlib
 import networkx as nx
 import matplotlib.pyplot as plt
 
 from networkx.drawing.nx_pydot import graphviz_layout
-
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -15,9 +13,6 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
 
 total_cell_number = 10 ** 8
 
@@ -222,13 +217,18 @@ for item in number_list:
 prob_number_list_ready = [(x, y) for x, y in zip(prob_list_ready, number_list_ready)]
 
 G = nx.balanced_tree(3, 5)
-color_list = ['black'] + ['#FFA6B3', '#80D4FF', '#C3DF86'] * (sum(3**i for i in range(0, 5)))
+node_color_list = ['black'] + ['#FFA6B3', '#80D4FF', '#C3DF86'] * (sum(3**i for i in range(0, 5)))
+edge_color_list = ['#FFA6B3', '#80D4FF', '#C3DF86'] * (sum(3**i for i in range(0, 5)))
 
-edge_labels = {edge: prob_num for edge, prob_num in zip(G.edges, prob_number_list_ready)}
+edge_labels_large = {edge: prob_num for edge, prob_num in zip(list(G.edges)[:120], prob_number_list_ready[:120])}
+edge_labels_small = {edge: prob_num for edge, prob_num in zip(list(G.edges)[120:], prob_number_list_ready[120:])}
+weights = np.array([prob[0] for prob in prob_number_list_ready])*5+1
 
 pos = graphviz_layout(G, prog="twopi")
 plt.figure(figsize=(20, 20))
-nx.draw(G, pos, alpha=1, node_size=50, node_color=color_list, with_labels=False)
-nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=10, label_pos=0.25)
+nx.draw(G, pos, alpha=1, node_size=200, node_color=node_color_list, with_labels=False, width=weights, edge_color=edge_color_list)
+nx.draw_networkx_edge_labels(G, pos, edge_labels_large, font_size=15, label_pos=0.45, bbox=dict(facecolor='white', edgecolor='none', pad=0.0))
+nx.draw_networkx_edge_labels(G, pos, edge_labels_small, font_size=10, label_pos=0.35, bbox=dict(facecolor='white', edgecolor='none', pad=0.0))
 plt.axis("equal")
-plt.savefig('Decision_Tree_Networkx.svg', format='svg', dpi=720)
+plt.savefig('Decision_Tree_Networkx.tiff', format='tiff', dpi=720)
+
