@@ -33,7 +33,6 @@ import pickle
 import csv
 import datetime
 import sys
-
 from Bio import SeqIO
 
 __author__ = 'Tee Udomlumleart'
@@ -113,7 +112,6 @@ class AllBarcode(Reference):
             pickle.dump(self.list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-
 class Functions:
     """
     Functions object contains miscellaneous functions that are important for analyzing reads from a fastq file.
@@ -166,17 +164,26 @@ class Functions:
 
         for seq_record in parsed_generator:
             all_reads += 1
+
+            # Check Phred score
             if sum(seq_record.letter_annotations['phred_quality'][:30]) < 0.8 * 40 * 30:
                 bad_barcode_reads += 1
                 continue
+
             read_sequence = seq_record.seq[:129]
+
+            # Check the errors in the constant regions
+            # Hamming errors in the first constant region <= 5 and Hamming errors in the second region <= 2
             if Functions.hamming_distance(Constants.constant_1, read_sequence[30:95]) > 5 or \
                     Functions.hamming_distance(Constants.constant_2, read_sequence[105:]) > 2:
                 bad_constant_reads += 1
                 continue
+
             read_barcode = str(read_sequence[:30])
             read_sample_index = str(read_sequence[95:105])
             sample_index_flag = True
+
+            # Errors in the sample index region must be <= 1 in order to be assigned
             for sample_index in sample_index_list:
                 if Functions.hamming_distance(sample_index, read_sample_index) <= 1:
                     read_sample_index = sample_index
@@ -184,9 +191,12 @@ class Functions:
             if sample_index_flag:
                 bad_sample_index_reads += 1
                 continue
+
             read_id = (read_barcode, read_sample_index)
             all_barcode_list.add_read(read_id)
             good_reads += 1
+
+            # print update every 1,000,000 reads
             if i % 1000000 == 0:
                 print(str(i) + ' reads have been parsed at ' + str(datetime.datetime.now()))
             i += 1
@@ -212,5 +222,8 @@ class Functions:
         all_barcode_list.save_pickle()
 
 if __name__ == '__main__':
+    # This program will operate on filename that is the second argument when run a python3 function on terminal
+    # i.e. python3 SequenceDecomplexationOptimized.py test.fastq
+    # in this case test.fastq will be analyzed by this file
     file = sys.argv[1]
     Functions.operate()

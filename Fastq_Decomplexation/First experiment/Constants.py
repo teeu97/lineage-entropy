@@ -4,6 +4,7 @@ Constants file contains all information about constant regions of this barcodes 
 Sample indexes here are defined by finding reverse complementary of corresponding region on reverse primers we use
 to amplify the barcode regions.
 """
+
 from Bio.Seq import Seq
 
 __author__ = 'Tee Udomlumleart'
@@ -11,9 +12,11 @@ __maintainer__ = 'Tee Udomlumleart'
 __email__ = ['teeu@mit.edu', 'salilg@mit.edu']
 __status__ = 'Production'
 
+# Constant regions of amplicons
 constant_1 = 'AGCAGAGCTACGCACTCTATGCTAGTGCTAGAGATCGGAAGAGCACACGTCTGAACTCCAGTCAC'
 constant_2 = 'ATCTCGTATGCCGTCTTCTGCTTG'
 
+# All sample indices
 sample_index_dict = {
     'sample_index_1':
     str(Seq('CAAGCAGAAGACGGCATACGAGATACGATCGTGAGTGACTGGAGTTCAGACGTGTGCTCTTCCGATCTCTAGCACTAGCATAGAGTGCGTAGCT'[24:34]).\
