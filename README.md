@@ -21,7 +21,8 @@ Welcome to the "lineage-entropy" GitHub repository! We are so excited to have yo
 	- scipy
 	- rpy2
   
-  by typing `pip install numpy scipy pandas seaborn biopython python-igraph graphviz networkx scipy rpy2` into your terminal or command prompt **if you do not use conda environment**.
+  **If you do not use conda environment** type `pip install numpy scipy pandas seaborn biopython python-igraph graphviz networkx scipy rpy2` into your terminal or command prompt.
+  
   **For conda environment,** you can use command `conda install numpy scipy pandas seaborn biopython python-igraph graphviz networkx scipy rpy2`.   
   
 3. - If you want to analyze FASTQ files, you can navigate to **Fastq_Decomplexation** folder. Instructions for analysis can be found inside. 
