@@ -27,6 +27,7 @@ Welcome to the "lineage-entropy" GitHub repository! We are so excited to have yo
   
 3. - If you want to analyze FASTQ files, you can navigate to **Fastq_Decomplexation** folder. Instructions for analysis can be found inside. 
    - If you want to work with already decomplexed files, please go to **Pickle_Files** folder and download pickle files there. These pickle files only contain scientific data related to this experiment; they will not harm your computer. 
+   
 4. Download python files in **Data_Analysis** folder to the same directory that contains the decomplexed FASTQ files (pickle files.)
 5. Have fun analyzing data!
 
