@@ -8,6 +8,20 @@ Welcome to the "lineage-entropy" GitHub repository! We are so excited to have yo
 3. **Pickle_Files** folder contains binary-serialized pickle files which contains collapsed and normalized barcode data. We used these pickle files in all of our downstream analyses. 
 
 ## Getting started 
-
-Maintained and updated by Tee Udomlumleart. 
-3/10/2021
+1. Install python by visiting [official website](https://www.python.org/downloads/). 
+2. Install the following dependencies
+	- numpy
+	- scipy
+	- pandas
+	- seaborn
+	- biopython
+	- python-igraph
+	- graphviz
+	- networkx
+	- scipy
+	- rpy2
+  by typing `pip install numpy scipy pandas seaborn biopython python-igraph graphviz networkx scipy rpy2` into your terminal or command prompt **if you do not use conda environment**.
+  **For conda environment,** you can use command `conda install numpy scipy pandas seaborn biopython python-igraph graphviz networkx scipy rpy2`.   
+3. - If you want to analyze FASTQ files, you can navigate to **Fastq_Decomplexation** folder. Instructions for analysis can be found inside. 
+   - If you want to work with already decomplexed files, please go to **Pickle_Files** folder and download pickle files there. These pickle files only contain scientific data related to this experiment; they will not harm your computer. 
+4. Download python files in **Data_Analysis** folder to the same directory that contains the decomplexed FASTQ files (pickle files.) 

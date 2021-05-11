@@ -1,10 +1,19 @@
+"""
+ViolinPlot_Downsampling.py analyzes the distribution of percent transitions across different sampling percentages.
+
+Files that contain different amount of reads (different sampling percentages) are named 20200501_finished_table_x_
+AnalyzedReady.pickle. x is the amount of percentage ranging from 0.01 to 100.
+"""
 import pickle
 import math
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-
 from matplotlib import ticker as mticker
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -14,23 +23,12 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 16}
-
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
-
-
 percentages = ['0.01', '0.1', '1', '10', '25', '50', '75', '90', '100']
 
 y_data_percentages = []
 y_data_sizes = []
 
 for percentage in percentages:
-
     total_cell_number = 10 ** 8
 
     state_1_ratio = 0.90
