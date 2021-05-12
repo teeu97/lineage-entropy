@@ -1,12 +1,20 @@
+"""
+DotPlots_AllTimepoint_Right.py generates a dot plot that shows the proportion of cells in different states across all
+timepoints and all lineages
+"""
+
 import pickle
 import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-
-from tqdm.auto import tqdm
 from matplotlib import cm
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -15,11 +23,7 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-
-matplotlib.rcParams['figure.dpi'] = 1200
-matplotlib.rcParams['figure.figsize'] = (6, 6)
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# Normalize the data
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -53,6 +57,7 @@ bottom_left_coord = (0, 0)
 
 triangle_vertices = np.array([top_right_coord, top_left_coord, bottom_left_coord])
 
+# iterate through each lineage
 for barcode, row in true_number_table.iterrows():
     barcode_dict = {}
 
@@ -65,6 +70,7 @@ for barcode, row in true_number_table.iterrows():
     barcode_summary = {'ternary_coord': [], 'cartesian_coord': [], 'vector': [], 'size': [], 'assigned_state': [],
                        'vector_size': [], 'cell_number': [], 'observed_bulk_size': [], 'total_size': 0}
 
+    # lineage size for each timepoint is defined by S1 cells + S2 cells + S3 cells
     barcode_size = [sum(row[1:4]), sum(row[5:8]), sum(row[21:24]), sum(row[33:36]), sum(row[37:40])]
 
     for timepoint in timepoints:
@@ -78,12 +84,16 @@ for barcode, row in true_number_table.iterrows():
                 ternary_coord.append(barcode_dict[timepoint + '_' + state] / timepoint_total)
                 cell_number.append(barcode_dict[timepoint + '_' + state])
 
+            # cell number contains number of cells in different states
             barcode_summary['cell_number'].append(cell_number)
+            # ternary coordinate shows the proportion of cells in three states
             barcode_summary['ternary_coord'].append(ternary_coord)
 
+            # turn ternary coordinate to cartesian coordinate to make downstream anaalysis easier
             cartesian_coord = np.dot(np.array(ternary_coord), triangle_vertices)
             barcode_summary['cartesian_coord'].append(list(cartesian_coord))
 
+            # assign states to this lineage by the plurality vote (highest proportion)
             for state_coord in triangle_vertices:
                 dist.append(euclidean_distance(cartesian_coord, state_coord))
             barcode_summary['assigned_state'].append(dist.index(min(dist)))
@@ -91,8 +101,10 @@ for barcode, row in true_number_table.iterrows():
             barcode_summary['size'].append(timepoint_total)
             barcode_summary['observed_bulk_size'].append(barcode_dict[timepoint + '_all'])
 
+    # if this lineage has reads in all timepoints
     if len(barcode_summary['cartesian_coord']) == 5:
         for i in range(4):
+            # define vector by finding euclidean distance between two points
             barcode_summary['vector'].append((barcode_summary['cartesian_coord'][i + 1][0] -
                                               barcode_summary['cartesian_coord'][i][0],
                                               barcode_summary['cartesian_coord'][i + 1][1] -
@@ -113,21 +125,21 @@ def scatter_plot_right_all(all_barcode_list):
     c_all = []
     color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=1, vmax=max(all_size_set)),
                                                    cmap='YlOrRd')
-
+    # sort the lineage based on their size (ascending: small -> large)
     all_barcode_list.sort(key=lambda barcode: barcode['size'][-1])
-    for barcode in tqdm(all_barcode_list):
+    for barcode in all_barcode_list:
         cartesian_coord = barcode['cartesian_coord']
         size = barcode['size']
         for i in range(4):
-            x_all.append(cartesian_coord[i][0])
-            y_all.append(cartesian_coord[i][1])
-            c_all.append(color_scalarMap.to_rgba(round(size[i], 3)))
+            x_all.append(cartesian_coord[i][0])  # record x-coord
+            y_all.append(cartesian_coord[i][1])  # record y-coord
+            c_all.append(color_scalarMap.to_rgba(round(size[i], 3)))  # use colormap to define the size of this lineage
 
     ax.scatter(x_all, y_all, c=c_all, marker='.')
-    # ax.set_title('All Timepoints')
-    # ax.text(11, 9.85, 'State 1')
-    # ax.text(-2, 9.85, 'State 2')
-    # ax.text(-2, -0.15, 'State 3')
+    ax.set_title('All Timepoints')
+    ax.text(11, 9.85, 'State 1')
+    ax.text(-2, 9.85, 'State 2')
+    ax.text(-2, -0.15, 'State 3')
     ax.axis('off')
 
     plt.savefig("DotPlots_AllTimepoints_Right.svg", bbox_inches='tight', format='svg', dpi=720)

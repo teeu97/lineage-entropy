@@ -23,12 +23,14 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
+# list of different percentages
 percentages = ['0.01', '0.1', '1', '10', '25', '50', '75', '90', '100']
 
 y_data_percentages = []
 y_data_sizes = []
 
 for percentage in percentages:
+    # Normalize the data
     total_cell_number = 10 ** 8
 
     state_1_ratio = 0.90
@@ -41,6 +43,7 @@ for percentage in percentages:
 
     normalizing_factor = [total_cell_number, state_1_number, state_2_number, state_3_number] * 10
 
+    # Open the pickle files that contains downsampled reads
     table = pickle.load(open('20200501_finished_table_{}_AnalyzedReady.pickle'.format(percentage), 'rb'))
 
     sum_table = table.sum(axis=0)
@@ -66,6 +69,7 @@ for percentage in percentages:
     for barcode, row in true_number_table.iterrows():
         barcode_dict = {}
 
+        # Retrieve different sample data from Day 0 to Day 24
         barcode_dict['d0_all'], barcode_dict['d0_s1'], barcode_dict['d0_s2'], barcode_dict['d0_s3'] = row[0:4]
         barcode_dict['d6_all'], barcode_dict['d6_s1'], barcode_dict['d6_s2'], barcode_dict['d6_s3'] = row[4:8]
         barcode_dict['d12_all'], barcode_dict['d12_s1'], barcode_dict['d12_s2'], barcode_dict['d12_s3'] = row[20:24]
@@ -75,37 +79,45 @@ for percentage in percentages:
         barcode_summary = {'ternary_coord': [], 'cartesian_coord': [], 'vector': [], 'size': [], 'assigned_state': [],
                            'total_transition_amount': 0}
 
+        # Barcode size for each timepoint is defined by the sum of cells in S1, S2, and S3
         barcode_size = [sum(row[1:4]), sum(row[5:8]), sum(row[21:24]), sum(row[33:36]), sum(row[37:40])]
 
         for timepoint in timepoints:
             timepoint_all_present = all(barcode_size)
             timepoint_total = sum([barcode_dict[timepoint + '_' + state] for state in states])
-            if timepoint_total:
+            if timepoint_total:  # Only analyze barcodes that have reads in this timepoint
                 ternary_coord = []
                 dist = []
                 for state in states:
                     ternary_coord.append(barcode_dict[timepoint + '_' + state] / timepoint_total)
+                # ternary_coord is defined by the proportion of cells in S1, S2, and S3
                 barcode_summary['ternary_coord'].append(ternary_coord)
 
+                # convert this ternary coordinate to cartesian coordinate to make it easier to plot
                 cartesian_coord = np.dot(np.array(ternary_coord), triangle_vertices)
                 barcode_summary['cartesian_coord'].append(list(cartesian_coord))
 
+                # assign state to this lineage for this timepoint based on which state has the highest proportion
                 for state_coord in triangle_vertices:
                     dist.append(euclidean_distance(cartesian_coord, state_coord))
                 barcode_summary['assigned_state'].append(dist.index(min(dist)))
 
                 barcode_summary['size'].append(timepoint_total)
 
+        # Make sure that this barcode has reads in all timepoints
         if len(barcode_summary['cartesian_coord']) == 5:
+            # Define the vector by subtracting two cartesian coordinates from the subsequent timepoint
             for i in range(4):
                 vector = (barcode_summary['cartesian_coord'][i + 1][0] - barcode_summary['cartesian_coord'][i][0],
                           barcode_summary['cartesian_coord'][i + 1][1] - barcode_summary['cartesian_coord'][i][1])
                 barcode_summary['vector'].append(vector)
                 barcode_summary['total_transition_amount'] += vector_size(vector[0], vector[1])
+            # Total transition amount is the sum of all vectors
             all_transition_size_list.append(barcode_summary['total_transition_amount'])
             for size in barcode_summary['size']:
                 all_size_set.add(round(size, 3))
             all_barcode_list.append(barcode_summary)
+    # Sort barcodes from biggest transition amount to smallest transition amount
     all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transition_amount'])
 
     barcode_number = len(all_barcode_list)
@@ -114,13 +126,17 @@ for percentage in percentages:
     all_population_sizes = []
 
     for barcode in all_barcode_list:
+        # Find the log of the average size
         average_size = sum(barcode['size'][1:]) / len(barcode['size'][1:])
         all_transition_amounts.append(barcode['total_transition_amount'])
         all_population_sizes.append(np.log10(average_size))
 
+    # Transition percentage = total_transition * 100 / (sqrt(2) * 4)
+    # Max transition = sqrt(2) * 4
     y_data_percentages.append(np.array(all_transition_amounts) * 100 / (math.sqrt(2)*4))
     y_data_sizes.append(all_population_sizes)
 
+# Distribution of transition percentage
 fig = plt.figure()
 ax = plt.axes()
 ax.set_title('Distribution of Percent Transition')
@@ -134,6 +150,7 @@ ax.set_xticklabels(percentages)
 ax.set_xlim(0.25, len(percentages) + 0.75)
 plt.savefig('ViolinPlot_Downsampling_TransitionPercent.tiff', bbox_inches='tight', format='tiff', dpi=720)
 
+# Distribution of size
 fig = plt.figure()
 ax = plt.axes()
 ax.set_ylim(bottom=0, top=7)

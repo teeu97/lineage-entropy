@@ -1,24 +1,123 @@
+"""
+VectorField_EachTimepoint_Right.py produces a vector field that shows average lineage movement for all timepoint
+"""
 import pickle
 import math
-import numpy as np
 import matplotlib
+import numpy as np
 import matplotlib.pyplot as plt
-
-from tqdm.auto import tqdm
 from matplotlib.lines import Line2D
-from matplotlib import cm
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
+# Find eucidian distance
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
 
 
+# Find the vector magnitude
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
 
+# Produce a vector field
+def vector_field_size_weight_shifted_size(all_barcode_list):
+    # Make a colormap based on lineage sizes
+    color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=1, vmax=max(all_size_set)),
+                                                   cmap='YlOrRd')
+
+    # set up the default thickness of the arrows
+    default_size = 3
+
+    # The thickness of arrows depend on the size of lineages
+    custom_lines = [Line2D([0], [0], color='black', lw=math.sqrt(default_size ** (i))) for i in range(4)]
+
+    # iterate through each iteration (D0 -> D6; D6 -> D12; D12 -> D18; D18 -> D24)
+    for timepoint in range(4):
+        fig = plt.figure()
+        triangle_coord = []
+        vector_dict = {}
+
+        # produce multiple bins inside a triangle to store the data
+        for i in range(11):
+            for j in range(i + 1):
+                triangle_coord.append((j, i))
+                vector_dict[(j, i)] = [0, 0, 0, 0]  # the data is store in 4 position
+                # the first position keeps the total x-displacement of the vector
+                # the second position keeps the total y-displacement of the vector
+                # the third position keeps the total lineage size in that bin
+                # the forth position keeps the total number of lineages assigned to that bin
+
+        # iterate through each lineage
+        for barcode in all_barcode_list:
+            cartesian_coord = barcode['cartesian_coord']
+            vector = barcode['vector']
+            size = barcode['size']
+            x_coord = cartesian_coord[timepoint][0]
+            y_coord = cartesian_coord[timepoint][1]
+            # assign this vector to the nearest bin
+            local_vector = vector_dict[(round(x_coord), round(y_coord))]
+            # add the x-coord of vector (size-weighted) to the bin
+            local_vector[0] += (vector[timepoint][0]) * size[timepoint + 1]
+            # add the y-coord of vector (size-weighted) to the bin
+            local_vector[1] += (vector[timepoint][1]) * size[timepoint + 1]
+            # add the size of this lineage to the bin
+            local_vector[2] += size[timepoint + 1]
+            local_vector[3] += 1
+
+        # set the size of lineage of an empty bin to 1 so that it doesn't give ZeroDivisionError later
+        for coord in vector_dict:
+            if vector_dict[coord][2] == 0:
+                vector_dict[coord][2] = 1
+
+        # Find the average x-coord and y-coord of vectors
+        for coord in vector_dict:
+            vector_dict[coord][0] /= vector_dict[coord][2]
+            vector_dict[coord][1] /= vector_dict[coord][2]
+
+        for coord in vector_dict:
+            # Draw an arrow in a non-empty bin
+            if vector_dict[coord][2] > 1:
+                # arrow color based on the total size in that bin
+                arrow_color = color_scalarMap.to_rgba(vector_dict[coord][2])
+                # arrow length is proportional to the vector magnitude
+                vector_magnitude = vector_size(4 * vector_dict[coord][0], 4 * vector_dict[coord][1])
+                # arrow size depends on the total number of lineages in that b\in
+                dot_size = default_size ** (math.floor(math.log10(vector_dict[coord][3])))
+                line_size = math.sqrt(dot_size)
+
+                plt.scatter(coord[0], coord[1], marker='.', color=arrow_color, s=dot_size)
+                plt.arrow(coord[0], coord[1], vector_dict[coord][0] / 15 + vector_dict[coord][0] / vector_magnitude,
+                          vector_dict[coord][1] / 15 + vector_dict[coord][1] / vector_magnitude, shape='full',
+                          head_width=0.1, color=arrow_color, linewidth=line_size, length_includes_head=True)
+
+        plt.title('Day ' + str(timepoint * 6) + ' to ' + str((timepoint + 1) * 6))
+        plt.arrow(6.5, 3.5, 17 / 30, 0, shape='full', head_width=0.1, color='black',
+                  linewidth=math.sqrt(default_size ** (0)), length_includes_head=True)
+        plt.arrow(6.5, 3, 5 / 6, 0, shape='full', head_width=0.1, color='black',
+                  linewidth=math.sqrt(default_size ** (0)), length_includes_head=True)
+        plt.arrow(6.5, 2.5, 7 / 6, 0, shape='full', head_width=0.1, color='black',
+                  linewidth=math.sqrt(default_size ** (0)), length_includes_head=True)
+        plt.text(6.25 + 47 / 30, 3.4, '10% of Transition', size='small')
+        plt.text(6.25 + 47 / 30, 2.9, '50% of Transition', size='small')
+        plt.text(6.25 + 47 / 30, 2.4, '100% of Transition', size='small')
+        plt.text(11, 9.85, 'State 1')
+        plt.text(-1.5, 9.85, 'State 2')
+        plt.text(-1.5, -0.15, 'State 3')
+        plt.axis('off')
+        plt.legend(custom_lines, ['[0, 10)', '[10, 100)', '[100, 1000)', '[1000, 10000)]'],
+                   title='Number of Distinct Barcodes', loc='lower right', fontsize='small', framealpha=1,
+                   edgecolor='white')
+        cbaxes = fig.add_axes([0.95, 3 / 22.5, 0.05, 0.65])
+        cbar = plt.colorbar(color_scalarMap, pad=0.05, shrink=0.8, cax=cbaxes)
+        cbar.set_label('Lineage Size', rotation=270, labelpad=10)
+        plt.savefig('VectorField_EachTimepoint_Right_D{}.svg'.format(timepoint*6), bbox_inches='tight', format='svg', dpi=720)
+
+# normalize and initialize the data
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -103,68 +202,5 @@ for barcode, row in true_number_table.iterrows():
         for size_ in barcode_summary['vector_size']:
             all_vector_size_set.add(round(size_, 3))
         all_barcode_list.append(barcode_summary)
-
-def vector_field_size_weight_shifted_size(all_barcode_list):
-    default_size = 3
-    color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=1, vmax=max(all_size_set)),
-                                                   cmap='YlOrRd')
-    custom_lines = [Line2D([0], [0], color='black', lw=math.sqrt(default_size ** (i))) for i in range(4)]
-    for timepoint in tqdm(range(4)):
-        fig = plt.figure()
-        triangle_coord = []
-        vector_dict = {}
-        vector_size_list = []
-        for i in range(11):
-            for j in range(i + 1):
-                triangle_coord.append((j, i))
-                vector_dict[(j, i)] = [0, 0, 0, 0]
-        for barcode in all_barcode_list:
-            cartesian_coord = barcode['cartesian_coord']
-            vector = barcode['vector']
-            size = barcode['size']
-            x_coord = cartesian_coord[timepoint][0]
-            y_coord = cartesian_coord[timepoint][1]
-            local_vector = vector_dict[(round(x_coord), round(y_coord))]
-            local_vector[0] += (vector[timepoint][0]) * size[timepoint + 1]
-            local_vector[1] += (vector[timepoint][1]) * size[timepoint + 1]
-            local_vector[2] += size[timepoint + 1]
-            local_vector[3] += 1
-        for coord in vector_dict:
-            if vector_dict[coord][2] == 0:
-                vector_dict[coord][2] = 1
-        for coord in vector_dict:
-            vector_dict[coord][0] /= vector_dict[coord][2]
-            vector_dict[coord][1] /= vector_dict[coord][2]
-        for coord in vector_dict:
-            if vector_dict[coord][2] > 1:
-                arrow_color = color_scalarMap.to_rgba(vector_dict[coord][2])
-                vector_magnitude = vector_size(4 * vector_dict[coord][0], 4 * vector_dict[coord][1])
-                dot_size = default_size ** (math.floor(math.log10(vector_dict[coord][3])))
-                line_size = math.sqrt(dot_size)
-                plt.scatter(coord[0], coord[1], marker='.', color=arrow_color, s=dot_size)
-                plt.arrow(coord[0], coord[1], vector_dict[coord][0] / 15 + vector_dict[coord][0] / vector_magnitude,
-                          vector_dict[coord][1] / 15 + vector_dict[coord][1] / vector_magnitude, shape='full',
-                          head_width=0.1, color=arrow_color, linewidth=line_size, length_includes_head=True)
-        # plt.title('Day ' + str(timepoint * 6) + ' to ' + str((timepoint + 1) * 6))
-        # plt.arrow(6.5, 3.5, 17 / 30, 0, shape='full', head_width=0.1, color='black',
-        #           linewidth=math.sqrt(default_size ** (0)), length_includes_head=True)
-        # plt.arrow(6.5, 3, 5 / 6, 0, shape='full', head_width=0.1, color='black',
-        #           linewidth=math.sqrt(default_size ** (0)), length_includes_head=True)
-        # plt.arrow(6.5, 2.5, 7 / 6, 0, shape='full', head_width=0.1, color='black',
-        #           linewidth=math.sqrt(default_size ** (0)), length_includes_head=True)
-        # plt.text(6.25 + 47 / 30, 3.4, '10% of Transition', size='small')
-        # plt.text(6.25 + 47 / 30, 2.9, '50% of Transition', size='small')
-        # plt.text(6.25 + 47 / 30, 2.4, '100% of Transition', size='small')
-        # plt.text(11, 9.85, 'State 1')
-        # plt.text(-1.5, 9.85, 'State 2')
-        # plt.text(-1.5, -0.15, 'State 3')
-        plt.axis('off')
-        # plt.legend(custom_lines, ['[0, 10)', '[10, 100)', '[100, 1000)', '[1000, 10000)]'],
-        #            title='Number of Distinct Barcodes', loc='lower right', fontsize='small', framealpha=1,
-        #            edgecolor='white')
-        # cbaxes = fig.add_axes([0.95, 3 / 22.5, 0.05, 0.65])
-        # cbar = plt.colorbar(color_scalarMap, pad=0.05, shrink=0.8, cax=cbaxes)
-        # cbar.set_label('Lineage Size', rotation=270, labelpad=10)
-        plt.savefig('VectorField_EachTimepoint_Right_D{}.svg'.format(timepoint*6), bbox_inches='tight', format='svg', dpi=720)
 
 vector_field_size_weight_shifted_size(all_barcode_list)
