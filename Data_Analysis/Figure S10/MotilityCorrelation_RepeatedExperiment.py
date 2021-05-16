@@ -1,14 +1,20 @@
+"""
+MotilityCorrelation_RepeatedExperiment.py analyzes the correlation of motility in the repeated experiments (across
+different replicates)
+"""
+
 import pickle
 import math
 import random
 import pandas as pd
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import scipy.stats
 
-from matplotlib import cm
-from tqdm.auto import tqdm
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -18,14 +24,8 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 16}
 
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# normalize reads and put them in data structures
 conditions = ['WT1', 'WT2', 'J1', 'J2']
 
 total_cell_number = 10 ** 8
@@ -155,6 +155,7 @@ for condition in conditions:
     all_barcode_set_dict[condition] = all_barcode_set
 
 
+# analyzes the correlation in WT group
 def correlation_WT():
     shared_barcode = all_barcode_set_dict['WT1'] & all_barcode_set_dict['WT2']
     motility_dict = {}
@@ -165,26 +166,25 @@ def correlation_WT():
         if barcode['id'] in shared_barcode:
             motility_dict[barcode['id']] += [barcode['transition_amount']]
 
-    color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0, vmax=math.log10(101)), cmap='rainbow')
-    rainbow = cm.get_cmap('rainbow', len(shared_barcode))
-    rainbow_list = rainbow(range(len(shared_barcode)))[::-1]
-
     print('WT')
     for transition in range(4):
         fig, ax = plt.subplots()
 
+        # normalize the transition from the first replicate
         x = np.array([motility_dict[barcode][0][transition] for barcode in motility_dict])
-        x /= math.sqrt(2)
-        x *= 100
-        x += 1
+        x /= math.sqrt(2)  # by divided by the maximum value of transition (sqrt(2))
+        x *= 100  # turn it to percentage by multiplying by 100
+        x += 1  # add 1 to make sure that it will be in the domain of logarithm
         x = np.log10(x)
 
+        # normalize the transition from the second replicate by usng the same approach
         y = np.array([motility_dict[barcode][1][transition] for barcode in motility_dict])
         y /= math.sqrt(2)
         y *= 100
         y += 1
         y = np.log10(y)
 
+        # finding linear regression
         slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
         rho, p_ = scipy.stats.spearmanr(x, y)
 
@@ -213,6 +213,7 @@ def correlation_randomized_WT():
             for timepoint in range(4):
                 all_possible_motility_2[timepoint].append(barcode['transition_amount'][timepoint])
 
+    # randomize transition
     for barcode_id in shared_barcode:
         all_timepoint_list = []
         for timepoint in range(4):
@@ -229,25 +230,25 @@ def correlation_randomized_WT():
             all_timepoint_list.append(timepoint_list)
         motility_dict[barcode_id] = all_timepoint_list
 
-    color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=10e-1, vmax=100), cmap='rainbow')
-    rainbow = cm.get_cmap('rainbow', len(shared_barcode))
-    rainbow_list = rainbow(range(len(shared_barcode)))[::-1]
-
     print('control')
     for transition in range(4):
         fig, ax = plt.subplots()
 
-        x = np.array([motility_dict[barcode][transition][0] for barcode in motility_dict])
-        x /= math.sqrt(2)
-        x *= 100
-        x += 1
+        # normalize the transition from the first replicate (randomized)
+        x = np.array([motility_dict[barcode][0][transition] for barcode in motility_dict])
+        x /= math.sqrt(2)  # by divided by the maximum value of transition (sqrt(2))
+        x *= 100  # turn it to percentage by multiplying by 100
+        x += 1  # add 1 to make sure that it will be in the domain of logarithm
         x = np.log10(x)
-        y = np.array([motility_dict[barcode][transition][1] for barcode in motility_dict])
+
+        # normalize the transition from the second replicate (randomized) by usng the same approach
+        y = np.array([motility_dict[barcode][1][transition] for barcode in motility_dict])
         y /= math.sqrt(2)
         y *= 100
         y += 1
         y = np.log10(y)
 
+        # find the linear regression
         slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
         rho, p_ = scipy.stats.spearmanr(x, y)
 
@@ -260,53 +261,5 @@ def correlation_randomized_WT():
         plt.savefig("MotilityCorrelation_RepeatedExperiment_Control_{}.tiff".format(transition), bbox_inches='tight', format='tiff', dpi=720)
         plt.close()
 
-def correlation_randomized_WT_p():
-    rho_list, r_list = [[] for i in range(4)], [[] for i in range(4)]
-    for attempt in tqdm(range(100000)):
-        shared_barcode = all_barcode_set_dict['WT1'] & all_barcode_set_dict['WT2']
-        all_possible_motility_1 = {timepoint: [] for timepoint in range(5)}
-        all_possible_motility_2 = {timepoint: [] for timepoint in range(5)}
-
-        motility_dict = {}
-
-        for barcode in all_barcode_list_dict['WT1']:
-            if barcode['id'] in shared_barcode:
-                for timepoint in range(4):
-                    all_possible_motility_1[timepoint].append(barcode['transition_amount'][timepoint])
-        for barcode in all_barcode_list_dict['WT2']:
-            if barcode['id'] in shared_barcode:
-                for timepoint in range(4):
-                    all_possible_motility_2[timepoint].append(barcode['transition_amount'][timepoint])
-
-        for barcode_id in shared_barcode:
-            all_timepoint_list = []
-            for timepoint in range(4):
-                timepoint_list = []
-
-                random_1 = random.choice(all_possible_motility_1[timepoint])
-                timepoint_list.append(random_1)
-                all_possible_motility_1[timepoint].remove(random_1)
-
-                random_2 = random.choice(all_possible_motility_2[timepoint])
-                timepoint_list.append(random_2)
-                all_possible_motility_2[timepoint].remove(random_2)
-
-                all_timepoint_list.append(timepoint_list)
-            motility_dict[barcode_id] = all_timepoint_list
-
-        for transition in range(4):
-            x = np.array([motility_dict[barcode][transition][0] for barcode in motility_dict])
-            y = np.array([motility_dict[barcode][transition][1] for barcode in motility_dict])
-            slope, intercept, r, p, stderr = scipy.stats.linregress(x, y)
-            rho, p_ = scipy.stats.spearmanr(x, y)
-
-            rho_list[transition].append(rho)
-            r_list[transition].append(r)
-
-    for x in r_list:
-        print('mean', np.mean(x))
-        print('std', np.std(x))
-
 correlation_randomized_WT()
 correlation_WT()
-# correlation_randomized_WT_p()

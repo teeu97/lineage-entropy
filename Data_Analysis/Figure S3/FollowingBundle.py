@@ -240,6 +240,6 @@ for istate, state in enumerate(states):
 
     fig_dict.append(ax_dict)
     plt.subplots_adjust(wspace=0, hspace=0)
-    # add the bundles to the figure 
+    # add the bundles to the figure
     following_bundle(lineage_data_dict['t0'][state], [state], istate, 0)
     plt.savefig('FollowingBundle_{}.tiff'.format(istate), format='tiff', dpi=720)

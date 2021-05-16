@@ -1,11 +1,20 @@
+"""
+Bootstrap_LSE_separate.py produces timepoint-specific transitional probability matrices using least square estimation
+and bootstrapping.
+"""
 import pickle
 import math
 import random
 import csv
 import numpy as np
-
 from numpy.linalg import pinv
 from scipy import stats
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -14,7 +23,7 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-
+# initialize and normalize data
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -96,37 +105,50 @@ for barcode, row in true_number_table.iterrows():
         all_barcode_list.append(barcode_summary)
 all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transition_amount'])
 
+# matrix_data_list is a list that contains 4 lists inside
+# (each list corresponds to a transitional matrix for that transition)
+# Inside that list contains 9 other numpy arrays which contains data of each entry of the 3x3 transitional matrix
 matrix_data_superlist = [[np.empty(0) for i in range(9)] for j in range(4)]
-bootstrap_sample_number = round(0.8*len(all_barcode_list))
-log_count = 0
+bootstrap_sample_number = round(0.8*len(all_barcode_list))  # number of bootstrap sample = 80% of all lineages
+log_count = 0  # keeping track of how many bootstrap iterations have completed
 
 def least_square_estimation_all_separate_timepoint(all_barcode_list):
-    probability_timepoint_list = []
+    """
+    This function produces transitional probability matrix using least square estimation
+    :arg all_barcode_list (list) - contains all lineages you want to find the transitional probability
+    """
+    probability_timepoint_list = []  # This list will contain 4 transitional matrices
     for timepoint in range(4):
-        P = np.zeros((3, 3))
         T_0 = np.zeros((len(all_barcode_list), 3))
         T_1 = np.zeros((len(all_barcode_list), 3))
         for index, barcode in enumerate(all_barcode_list):
             ternary_coord = barcode['ternary_coord']
-            size = barcode['size']
-            T_0[index] = np.array(ternary_coord[timepoint])
-            T_1[index] = np.array(ternary_coord[timepoint + 1])
+            T_0[index] = np.array(ternary_coord[timepoint])  # Populate T_0 with data from the earlier timepoint
+            T_1[index] = np.array(ternary_coord[timepoint + 1])  # Populate T_1 with data from the later timepoint
             T_0_t = np.transpose(T_0)
+        # Find the transitional matrix from least square estimation and add it to the list above
         probability_timepoint_list.append(np.matmul(pinv(np.matmul(T_0_t, T_0)), np.matmul(T_0_t, T_1)))
     return probability_timepoint_list
 
 
+# open filename
 with open('Bootstrap_LSE_separate.csv', mode='w') as csv_file:
     csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    # bootstrap iteration = 1,000,000
     for bootstrap_sample_iteration in range(1000000):
         print(bootstrap_sample_iteration)
+        # sample 80% of the original total lineages
         bootstrap_sample = random.choices(all_barcode_list, k=bootstrap_sample_number)
+        # find the probability matrices associate with this lineage
         LSE_result_list = least_square_estimation_all_separate_timepoint(bootstrap_sample)
         for transition, LSE_result in enumerate(LSE_result_list):
             matrix_data_list = matrix_data_superlist[transition]
+            # add the data in each entry to the super list
+            # entry (i,j) will be added to matrix_data_superlist[transition][3*i + j]
             for ir, row in enumerate(LSE_result):
                 for ic, entry in enumerate(LSE_result[ir]):
                     matrix_data_list[3*ir+ic] = np.append(matrix_data_list[3*ir+ic], entry)
+        # Report data in every 10^i iterations
         if bootstrap_sample_iteration % (10 ** log_count) == 0:
             print(log_count)
             csv_writer.writerow(['Number of bootstrap samples = {}'.format(10 ** log_count)])
@@ -136,12 +158,14 @@ with open('Bootstrap_LSE_separate.csv', mode='w') as csv_file:
                 csv_writer.writerow(['D{} to D{} Transition'.format(6*transition, 6*(transition+1))])
                 csv_writer.writerow(['Index', 'Mean', '2.5th Percentile', '97.5th Percentile', 'SEM'])
                 for index, entry in enumerate(matrix_data_list):
+                    # find mean, percentile 2.5, percentile 97.5, and standard error of the mean
                     csv_writer.writerow([str(index), str(entry.mean()), str(np.percentile(entry, 2.5)),
                                          str(np.percentile(entry, 97.5)), str(stats.sem(entry, axis=None, ddof=0))])
                 csv_writer.writerow([])
             log_count += 1
             print('done')
 
+# dump pickle file for later use
 pickle.dump(matrix_data_superlist, open('Bootstrap_LSE_separate.pickle', 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
 
 

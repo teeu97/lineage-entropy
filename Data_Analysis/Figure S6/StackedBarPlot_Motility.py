@@ -1,14 +1,17 @@
+"""
+StackedBarPlot_Motility.py analyzes the proportion of lineage with different sizes across different motility group
+"""
 import pickle
 import math
 import pandas as pd
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
-from matplotlib.lines import Line2D
 from matplotlib import cm
-from scipy import stats
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -18,14 +21,7 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 16}
-
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# normalizing the reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -43,11 +39,6 @@ table = pickle.load(open('191012_finished_table.pickle', 'rb'))
 sum_table = table.sum(axis=0)
 normalized_table = table.div(sum_table)
 true_number_table = (normalized_table * normalizing_factor).round()
-
-normalized_table_2 = table.div(sum_table)
-# normalizing_factor_2 = [0, 108703, 119310, 173167, 0, 131053, 131434, 100338, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 283972, 297429, 285009, 0, 0, 0, 0, 0, 0, 0, 0, 0, 283771, 310282, 285815, 0, 288557, 329323, 184856]
-normalizing_factor_2 = normalizing_factor
-true_number_table_2 = (normalized_table_2 * normalizing_factor_2).round()
 
 states = ['s1', 's2', 's3']
 states_coords = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]
@@ -107,7 +98,7 @@ for barcode, row in true_number_table.iterrows():
         all_transition_size_list.append(barcode_summary['total_transition_amount'])
         for size in barcode_summary['size']:
             all_size_set.add(round(size, 3))
-        cells = true_number_table_2.iloc[j, :]
+        cells = true_number_table.iloc[j, :]
         barcode_summary['s1_cells'] = (cells[1] + cells[5] + cells[21] + cells[33] + cells[37]) / 5
         barcode_summary['s2_cells'] = (cells[2] + cells[6] + cells[22] + cells[34] + cells[38]) / 5
         barcode_summary['s3_cells'] = (cells[3] + cells[7] + cells[23] + cells[35] + cells[39]) / 5
@@ -118,43 +109,32 @@ for barcode, row in true_number_table.iterrows():
 all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transition_amount'])
 
 states = ['s1', 's2', 's3']
-for state in states:
+for state in states:  # iterate through different state
     motility_group = [
         all_barcode_list[round(j * 20 / 100 * len(all_barcode_list)):round((j + 1) * 20 / 100 * len(all_barcode_list))]
-        for j in range(5)]
+        for j in range(5)]  # split lineages into different groups based on their motility (total transition)
     motility_size_group = [[] for i in range(5)]
 
-    number_small = 0
-    number_large = 0
-
+    # only select the number of cells in the state you are interested in
     for index, group in enumerate(motility_group):
         for barcode in group:
             motility_size_group[index].append(barcode['{}_cells'.format(state)])
 
+    # define bins for the stacked bar plot
     bins = [5 * (10 ** i) for i in range(0, 6, 1)]
 
-    for barcode in all_barcode_list:
-        if barcode['{}_cells'.format(state)] < bins[-2]:
-            number_small += 1
-            continue
-        else:
-            number_large += 1
-            continue
-
-    print(number_small, number_large)
-
+    # making the histogram
     histogram_group = [np.histogram(group, bins)[0] for group in motility_size_group]
-    print(histogram_group)
     total_lineage = [0 for i in range(5)]
     for group in histogram_group:
         for i, size in enumerate(group):
             total_lineage[i] += size
-    print(total_lineage)
 
     histogram_group_df = pd.DataFrame(histogram_group)
     total = histogram_group_df.sum(axis=0)
     histogram_percentage_df = histogram_group_df / histogram_group_df.sum(axis=0)
 
+    # define the color
     rainbow = cm.get_cmap('rainbow_r', 5)
     rainbow_list = rainbow(range(5))
 
@@ -162,6 +142,7 @@ for state in states:
     names = [i for i in range(0, 5)]
     x = [i for i in range(len(names))]
 
+    # make the stacked bar plot
     for i in range(5):
         if i == 0:
             plt.bar(x, histogram_percentage_df.iloc[i, :], color=rainbow_list[i], width=bar_width)

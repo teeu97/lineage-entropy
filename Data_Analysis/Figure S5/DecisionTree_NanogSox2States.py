@@ -1,11 +1,19 @@
+"""
+DecisionTree_NanogSox2States.pu produces a decision tree that shows the distribution of lineages across different
+states throughout 5 different timepoints.
+"""
 import pickle
 import math
 import numpy as np
-import matplotlib
 import networkx as nx
 import matplotlib.pyplot as plt
-
 from networkx.drawing.nx_pydot import graphviz_layout
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -14,7 +22,7 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-
+# initialize and normalize data
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -101,24 +109,27 @@ for barcode, row in true_number_table.iterrows():
             all_vector_size_set.add(round(size_, 3))
         all_barcode_list.append(barcode_summary)
 
-
+# Define a data structure that can keep track of lineage history
+# It is a recursive tree structure: node keeps lineages in one timepoint; edge represents different states and point
+# to the node on the next timepoint
 class ProbabilityTree():
     def __init__(self, initial_state=None, timepoint=0):
+        # initialize
         self.timepoint = timepoint
         self.total = 0
 
-        if initial_state is None:
+        if initial_state is None:  # if this is a starting node, there is no state history
             self.state_history = []
-        else:
+        else:  # if not, keep the input state history
             self.state_history = initial_state
 
-        if self.timepoint < 5:
+        if self.timepoint < 5:  # if this is not a terminal node, run a recursive program
             self.states = [ProbabilityTree(self.get_state_history() + [i + 1], self.get_timepoint() + 1) for i in
-                           range(3)]
-            self.barcodes = [[] for i in range(3)]
-            self.probabilities = [0 for i in range(3)]
-            self.children_lineage_numbers = [0 for i in range(3)]
-        else:
+                           range(3)]  # self.states represents 3 branches that point to 3 different states
+            self.barcodes = [[] for i in range(3)]  # keep the barcodes that are assigned to three different states
+            self.probabilities = [0 for i in range(3)]  # keep the fraction of barcodes that are assigned to states
+            self.children_lineage_numbers = [0 for i in range(3)]  # keep the number of barcodes that are assigned
+        else:  # if this is a terminal node, there is nothing to do - base case
             self.states = None
             self.barcodes = None
             self.probabilities = None
@@ -142,59 +153,74 @@ class ProbabilityTree():
     def get_children(self):
         return self.states
 
-    def traverse_tree(self, list_):
-        if not list_:
+    def traverse_tree(self, state_history):
+        """
+        this function traverses a tree when is given a state history and point to a node
+        :arg state_history (list) - a list of states (int)
+        """
+        # if there is no state_history, just return the node
+        if not state_history:
             return self
-        return self.get_children()[list_[0] - 1].traverse_tree(list_[1:])
+        # if there is a state history, run down the state history and return the node
+        return self.get_children()[state_history[0] - 1].traverse_tree(state_history[1:])
 
-    def retrieve_conditional_probability(self, list_):
-        if len(list_) == 1:
-            return self.get_probability()[list_[0] - 1]
-        return self.get_children()[list_[0] - 1].retrieve_conditional_probability(list_[1:])
+    def retrieve_conditional_probability(self, state_history):
+        """
+        this function returns a conditional probability at the last transition of the state history
+        :arg state_history (list) - a list of states (int)
+        """
+        # if it is at the transition of interest
+        if len(state_history) == 1:
+            return self.get_probability()[state_history[0] - 1]
+        # if it is nor, then run this function recursively
+        return self.get_children()[state_history[0] - 1].retrieve_conditional_probability(state_history[1:])
 
-    def retrieve_all_probability(self, list_, so_far=None):
+    def retrieve_all_probability(self, state_history, so_far=None):
+        """
+        this function computes a total probability given a state history
+        :arg state_history (list) - a list of states (int)
+        :arg so_far (float) - the total probability up to that transition
+        """
         if so_far is None:
+            # initialize the variable = 1
             so_far = 1
-        if len(list_) == 1:
-            return so_far * self.get_probability()[list_[0] - 1]
-        so_far = so_far * self.get_probability()[list_[0] - 1]
-        return self.get_children()[list_[0] - 1].retrieve_all_probability(list_[1:], so_far)
+        if len(state_history) == 1:
+            # base case: return the product of all probabilities
+            return so_far * self.get_probability()[state_history[0] - 1]
+        # iterative case: run a function while passing the update so_far variable
+        so_far = so_far * self.get_probability()[state_history[0] - 1]
+        return self.get_children()[state_history[0] - 1].retrieve_all_probability(state_history[1:], so_far)
 
     def update(self, barcode_list):
+        """
+        this function populates the decision tree
+        :arg barcode_list (list) - a list of barcodes
+        """
         self.total = len(barcode_list)
         if self.timepoint < 5:
             for barcode in barcode_list:
+                # assign barcodes to different list based on their assigned states
                 self.barcodes[barcode['assigned_state'][self.timepoint]].append(barcode)
             for index, state in enumerate(self.get_children()):
-                state.update(self.barcodes[index])
-                if self.get_total():
+                state.update(self.barcodes[index]) # iteratively fill out the decision tree
+                if self.get_total():  # if there are some lineages, calculate the probabilities
                     self.probabilities[index] = state.get_total() / self.get_total()
                     self.children_lineage_numbers[index] = state.get_total()
-                else:
+                else:  # if not, set the probability to 0
                     self.probabilities[index] = 0
 
-    def generate_tree_str(self):
-        if self.get_timepoint() == 5:
-            tree_str = ''.join([str(s) for s in self.get_state_history()])
-            return tree_str
-        else:
-            tree_str = '('
-            for index, child in enumerate(self.get_children()):
-                tree_str += '{}: {}'.format(child.generate_tree_str(), round(self.get_probability()[index], 3))
-                if index < 2:
-                    tree_str += ','
-            tree_str += ')'
-            return tree_str
 
+p = ProbabilityTree()  # initialize a ProbabilityTree object
+p.update(all_barcode_list)  # populate the whole tree
 
-p = ProbabilityTree()
-p.update(all_barcode_list)
-
+# a dict where each key represent a timepoint and each value has probability of each transition
 probability_dict = {i: [] for i in range(6)}
+# a dict where each key represent a timepoint and each value has number of lineage of each transition
 number_dict = {i: [] for i in range(6)}
 
 
 def generate_probability_igraph(p):
+    # full those two dicts above for making igraph
     timepoint = p.get_timepoint()
     probability_dict[timepoint] += p.get_probability()
     number_dict[timepoint] += p.get_children_lineage_number()
@@ -205,6 +231,7 @@ def generate_probability_igraph(p):
 
 generate_probability_igraph(p)
 
+# unflatten the value lists for the igraph format
 prob_list = list(probability_dict.values())
 prob_list_ready = []
 number_list = list(number_dict.values())
@@ -215,16 +242,22 @@ prob_list_ready = list(np.round(prob_list_ready, 2))
 for item in number_list:
     number_list_ready += item
 
+# probability - number list for each transition
 prob_number_list_ready = [(x, y) for x, y in zip(prob_list_ready, number_list_ready)]
 
-G = nx.balanced_tree(3, 5)
+G = nx.balanced_tree(3, 5)  # create a balance tree that has 5 layers and each node has 3 outgoing edges
+# set colors
 node_color_list = ['black'] + ['#FFA6B3', '#80D4FF', '#C3DF86'] * (sum(3**i for i in range(0, 5)))
 edge_color_list = ['#FFA6B3', '#80D4FF', '#C3DF86'] * (sum(3**i for i in range(0, 5)))
 
+# set font size for the edges
 edge_labels_large = {edge: prob_num for edge, prob_num in zip(list(G.edges)[:120], prob_number_list_ready[:120])}
 edge_labels_small = {edge: prob_num for edge, prob_num in zip(list(G.edges)[120:], prob_number_list_ready[120:])}
+
+# set the edge weights
 weights = np.array([prob[0] for prob in prob_number_list_ready])*5+1
 
+# plot the figure
 pos = graphviz_layout(G, prog="twopi")
 plt.figure(figsize=(20, 20))
 nx.draw(G, pos, alpha=1, node_size=200, node_color=color_list, with_labels=False, width=weights, edge_color=edge_color_list)

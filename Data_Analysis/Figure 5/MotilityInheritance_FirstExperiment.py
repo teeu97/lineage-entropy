@@ -1,14 +1,19 @@
+"""
+MotilityInheritance_FirstExperiment.py analyzes the inheritance of motility in the first experiment
+"""
+
 import pickle
 import math
-import pandas as pd
-import numpy as np
 import matplotlib
+import numpy as np
 import matplotlib.pyplot as plt
-
 from matplotlib import cm
 
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -18,6 +23,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
+# normalize barcodes
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -103,6 +109,7 @@ def motility_super_switcher_histogram_all(all_barcode_list):
     rainbow = cm.get_cmap('rainbow_r', 10)
     rainbow_list = rainbow(range(10))
 
+    # sort barcodes based on its total transition amount
     all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transition_amount'])
     for transition in range(4):
         fig, ax = plt.subplots()
@@ -115,8 +122,34 @@ def motility_super_switcher_histogram_all(all_barcode_list):
             motility = barcode['transition_amount'][transition]
             data[int(index / len(all_barcode_list) * 10)].append(motility * 100 / math.sqrt(2))
 
+        # plot stacked bar plot
         ax.hist(data, stacked=True, log=True, histtype='barstacked', bins=np.arange(0, 105, 5), color=rainbow_list)
 
         plt.savefig("MotilityInheritance_FirstExperiment_Log_T{}.svg".format(transition), format='svg', bbox_inches='tight', dpi=720)
 
+def fix_hist_step_vertical_line_at_end(ax):
+    # this function removes the vertical line at the end of CDF
+    axpolygons = [poly for poly in ax.get_children() if isinstance(poly, matplotlib.patches.Polygon)]
+    for poly in axpolygons:
+        poly.set_xy(poly.get_xy()[:-1])
+
+def motility_super_switcher_histogram_all(all_barcode_list):
+    rainbow = cm.get_cmap('rainbow_r', 10)
+    rainbow_list = rainbow(range(10))
+
+    all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transition_amount'])
+    for transition in range(4):
+        fig, ax = plt.subplots()
+        plt.axis('off')
+        data = [[] for i in range(10)]
+        for index, barcode in enumerate(all_barcode_list):
+            motility = barcode['transition_amount'][transition]
+            data[int(index / len(all_barcode_list) * 10)].append(motility * 100 / math.sqrt(2))
+
+        # plot CDF
+        ax.hist(data, density=True, histtype='step', cumulative=True, bins=np.arange(0, 105, 1), color=rainbow_list)
+        fix_hist_step_vertical_line_at_end(ax)
+        plt.savefig("MotilityInheritance_FirstExperiment_CDF_T{}.svg".format(transition), format='svg', bbox_inches='tight', dpi=720)
+
+motility_super_switcher_histogram_all(all_barcode_list)
 motility_super_switcher_histogram_all(all_barcode_list)
