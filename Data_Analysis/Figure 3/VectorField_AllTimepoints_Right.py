@@ -1,12 +1,19 @@
+"""
+This file produces dot plots showing proportion of cells in different states in all timepoint
+"""
+
 import pickle
 import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-
-from tqdm.auto import tqdm
 from matplotlib.lines import Line2D
 from matplotlib import cm
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -16,6 +23,8 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
+
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -101,43 +110,71 @@ for barcode, row in true_number_table.iterrows():
             all_vector_size_set.add(round(size_, 3))
         all_barcode_list.append(barcode_summary)
 
+
 def vector_field_size_weight_shifted_size_all(all_barcode_list):
+    # Make a colormap based on lineage sizes
     default_size = 3
+
+    # set up the default thickness of the arrows
     color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin = 1, vmax = max(all_size_set)), cmap='YlOrRd')
+
+    # The thickness of arrows depend on the size of lineages
     custom_lines = [Line2D([0], [0], color='black', lw=math.sqrt(default_size ** (i))) for i in range(4)]
     triangle_coord = []
     vector_dict = {}
+
+    # produce multiple bins inside a triangle to store the data
     for i in range(11):
         for j in range(i+1):
             triangle_coord.append((j, i))
-            vector_dict[(j, i)] = [0, 0, 0, 0]
-    for timepoint in range(4):
-        for barcode in all_barcode_list:
-            cartesian_coord = barcode['cartesian_coord']
-            vector = barcode['vector']
-            size = barcode['size']
-            x_coord = cartesian_coord[timepoint][0]
-            y_coord = cartesian_coord[timepoint][1]
-            local_vector = vector_dict[(round(x_coord), round(y_coord))]
-            local_vector[0] += (vector[timepoint][0]) * size[timepoint+1]
-            local_vector[1] += (vector[timepoint][1]) * size[timepoint+1]
-            local_vector[2] += size[timepoint+1]
-            local_vector[3] += 1
-    fig = plt.figure(figsize=[8,6])
-    for coord in vector_dict:
-        if vector_dict[coord][2] == 0:
-            vector_dict[coord][2] = 1
-    for coord in vector_dict:
-        vector_dict[coord][0] /= vector_dict[coord][2]
-        vector_dict[coord][1] /= vector_dict[coord][2]
-    for coord in tqdm(vector_dict):
-        if vector_dict[coord][2] > 1:
-            arrow_color = color_scalarMap.to_rgba(vector_dict[coord][2])
-            vector_magnitude = vector_size(4 * vector_dict[coord][0], 4 * vector_dict[coord][1])
-            dot_size = default_size ** (math.floor(math.log10(vector_dict[coord][3])))
-            line_size = math.sqrt(dot_size)
-            plt.scatter(coord[0], coord[1], marker='.', color=arrow_color, s=dot_size)
-            plt.arrow(coord[0], coord[1], vector_dict[coord][0]/15 + vector_dict[coord][0]/vector_magnitude, vector_dict[coord][1]/15 + vector_dict[coord][1]/vector_magnitude, shape='full', head_width=0.1, color=arrow_color, linewidth=line_size, length_includes_head=True)
+            vector_dict[(j, i)] = [0, 0, 0, 0]  # the data is store in 4 position
+            # the first position keeps the total x-displacement of the vector
+            # the second position keeps the total y-displacement of the vector
+            # the third position keeps the total lineage size in that bin
+            # the forth position keeps the total number of lineages assigned to that bin
+
+    # iterate through each lineage
+    for barcode in all_barcode_list:
+        cartesian_coord = barcode['cartesian_coord']
+        vector = barcode['vector']
+        size = barcode['size']
+        x_coord = cartesian_coord[timepoint][0]
+        y_coord = cartesian_coord[timepoint][1]
+        # assign this vector to the nearest bin
+        local_vector = vector_dict[(round(x_coord), round(y_coord))]
+        # add the x-coord of vector (size-weighted) to the bin
+        local_vector[0] += (vector[timepoint][0]) * size[timepoint + 1]
+        # add the y-coord of vector (size-weighted) to the bin
+        local_vector[1] += (vector[timepoint][1]) * size[timepoint + 1]
+        # add the size of this lineage to the bin
+        local_vector[2] += size[timepoint + 1]
+        local_vector[3] += 1
+
+        # set the size of lineage of an empty bin to 1 so that it doesn't give ZeroDivisionError later
+        for coord in vector_dict:
+            if vector_dict[coord][2] == 0:
+                vector_dict[coord][2] = 1
+
+        # Find the average x-coord and y-coord of vectors
+        for coord in vector_dict:
+            vector_dict[coord][0] /= vector_dict[coord][2]
+            vector_dict[coord][1] /= vector_dict[coord][2]
+
+        for coord in vector_dict:
+            # Draw an arrow in a non-empty bin
+            if vector_dict[coord][2] > 1:
+                # arrow color based on the total size in that bin
+                arrow_color = color_scalarMap.to_rgba(vector_dict[coord][2])
+                # arrow length is proportional to the vector magnitude
+                vector_magnitude = vector_size(4 * vector_dict[coord][0], 4 * vector_dict[coord][1])
+                # arrow size depends on the total number of lineages in that b\in
+                dot_size = default_size ** (math.floor(math.log10(vector_dict[coord][3])))
+                line_size = math.sqrt(dot_size)
+
+                plt.scatter(coord[0], coord[1], marker='.', color=arrow_color, s=dot_size)
+                plt.arrow(coord[0], coord[1], vector_dict[coord][0] / 15 + vector_dict[coord][0] / vector_magnitude,
+                          vector_dict[coord][1] / 15 + vector_dict[coord][1] / vector_magnitude, shape='full',
+                          head_width=0.1, color=arrow_color, linewidth=line_size, length_includes_head=True)
     coord = (0, 0)
     # plt.title('All Transitions')
     plt.arrow(6.5, 3.5, 17/30, 0, shape='full', head_width=0.1, color='black', linewidth=math.sqrt(default_size ** (0)), length_includes_head=True)

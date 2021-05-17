@@ -1,22 +1,14 @@
-import pickle
-import math
-import pandas as pd
-import numpy as np
+"""
+This file produces a colorbar for different percentile of motility
+"""
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
-from matplotlib.lines import Line2D
 from matplotlib import cm
-from scipy import stats
 
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 16}
-
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 rainbow = cm.get_cmap('rainbow_r', 5)
 rainbow_list = rainbow(range(5))

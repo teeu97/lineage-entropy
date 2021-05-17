@@ -1,11 +1,20 @@
+"""
+This file use bootstrapping to find transition matrix using LeastSqaureEstimation
+"""
+
 import pickle
 import math
 import random
 import csv
 import numpy as np
-
 from numpy.linalg import pinv
 from scipy import stats
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -15,6 +24,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -96,11 +106,14 @@ for barcode, row in true_number_table.iterrows():
         all_barcode_list.append(barcode_summary)
 all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transition_amount'])
 
-matrix_data_list = [np.empty(0) for i in range(9)]
-bootstrap_sample_number = round(0.8*len(all_barcode_list))
-log_count = 0
+# make a list that contains 9 lists inside
+matrix_data_list = [np.empty(0) for i in range(9)]  # store each entry of matrix in a list
+bootstrap_sample_number = round(0.8*len(all_barcode_list))  # sample 80% of the total lineages
+log_count = 0  # keep track of bootstrap iterations
+
 
 def least_square_estimation_all_timepoint(all_barcode_list):
+    # perform least square estimation to estimate the transition matrix
     T_0 = np.empty((len(all_barcode_list) * 4, 3))
     T_1 = np.empty((len(all_barcode_list) * 4, 3))
     length = 0
@@ -116,13 +129,19 @@ def least_square_estimation_all_timepoint(all_barcode_list):
 
 
 with open('Bootstrap_LSE.csv', mode='w') as csv_file:
+    # open a file and csv writer function
     csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    for bootstrap_sample_iteration in range(1000000):
+    # bootstrap iterate 10^5 times
+    for bootstrap_sample_iteration in range(100000):
+        # sample 80% of all lineages
         bootstrap_sample = random.choices(all_barcode_list, k=bootstrap_sample_number)
+        # calculate transition matrix from those 80% of all lineages
         LSE_result = least_square_estimation_all_timepoint(bootstrap_sample)
+        # record each entry in a list in matrix_data_list
         for ir, row in enumerate(LSE_result):
             for ic, entry in enumerate(LSE_result[ir]):
                 matrix_data_list[3*ir+ic] = np.append(matrix_data_list[3*ir+ic], entry)
+        # every 10**i iterations, record the data
         if bootstrap_sample_iteration % (10 ** log_count) == 0:
             csv_writer.writerow(['Number of bootstrap samples = {}'.format(10**log_count)])
             csv_writer.writerow(['Index', 'Mean', '2.5th Percentile', '97.5th Percentile', 'SEM'])

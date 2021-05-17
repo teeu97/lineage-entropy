@@ -1,10 +1,18 @@
+"""
+This file produces a stacked histogram that shows the distribution of motility in all timepoints combined
+"""
+
 import pickle
 import math
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-
 from matplotlib import cm
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -13,14 +21,8 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 16}
 
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -102,12 +104,13 @@ all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transitio
 
 barcode_number = len(all_barcode_list)
 
+
 def scatter_plot(all_barcode_list):
-    rainbow_scalarMap = matplotlib.cm.ScalarMappable(
-        norm=matplotlib.colors.Normalize(vmin=0, vmax=len(all_barcode_list)), cmap='rainbow')
+    # each lineage has a unique color
     rainbow = cm.get_cmap('rainbow', barcode_number)
     rainbow_list = rainbow(range(barcode_number))[::-1]
 
+    # iterate through each transition
     for transition in range(4):
         fig = plt.figure()
         ax = plt.axes()
@@ -115,6 +118,7 @@ def scatter_plot(all_barcode_list):
         ax.set_ylabel('Log Average Lineage Size')
         ax.set_xlabel('Total Amount of Transition')
 
+        # plot scatter plots
         for index, barcode in enumerate(all_barcode_list):
             average_size = sum(barcode['size'][1:]) / len(barcode['size'][1:])
             plt.scatter(barcode['transition_amount'][transition], np.log10(average_size), color=rainbow_list[index], marker='.')
@@ -125,11 +129,11 @@ def scatter_plot(all_barcode_list):
 
 
 def histogram(all_barcode_list):
-    rainbow_scalarMap = matplotlib.cm.ScalarMappable(
-        norm=matplotlib.colors.Normalize(vmin=0, vmax=len(all_barcode_list)), cmap='rainbow')
+    # each lineage gets unique color
     rainbow = cm.get_cmap('rainbow_r', barcode_number)
     rainbow_list = rainbow(range(barcode_number))[::-1]
 
+    # iterate through each transition
     for transition in range(4):
         fig = plt.figure()
         ax = plt.axes()
@@ -137,7 +141,6 @@ def histogram(all_barcode_list):
         if transition == 0:
             ax.set_ylabel('Number of Distinct Lineages')
             ax.set_xlabel('Total Amount of Transition')
-
 
         n, bins, patches = plt.hist([barcode['transition_amount'][transition] for barcode in all_barcode_list], 30, color='black')
         plt.ylim(0, 800)

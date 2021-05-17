@@ -1,13 +1,18 @@
+"""
+This file produces a sawtooth graph that shows motility of all lineages across all timepoints
+"""
+
 import pickle
 import math
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-
 from matplotlib import cm
 
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -17,6 +22,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -98,6 +104,7 @@ all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transitio
 
 barcode_number = len(all_barcode_list)
 
+# each barcode has a unique color
 rainbow = cm.get_cmap('rainbow_r', barcode_number)
 rainbow_list = rainbow(range(barcode_number))
 
@@ -110,6 +117,7 @@ ax.set_yicks(np.arange(1, math.sqrt(2), num=5))
 ax.set_xticks([i for i in range(1, 5)])
 ax.set_title('All Lineages')
 
+# plot the transition amount across all timepoints
 for index, barcode in enumerate(all_barcode_list):
     average_size = sum(barcode['size'][1:]) / len(barcode['size'][1:])
     plt.plot([i for i in range(1, 5)], barcode['transition_amount'], color=rainbow_list[index])

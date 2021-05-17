@@ -1,15 +1,19 @@
+"""
+This file produces a stacked barplot that shows the number of lineages over time
+"""
+
 import pickle
-import matplotlib
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
 from matplotlib import cm
-from tqdm.auto import tqdm
 
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
+# normalize the reads
 total_cell_number = 10**8
 
 state_1_ratio = 0.90
@@ -39,20 +43,24 @@ for barcode, row in true_number_table.iterrows():
     new_list = [1, sum(row[1:4]), sum(row[5:8]), sum(row[21:24]), sum(row[33:36]), sum(row[37:40])]
     all_barcode_number_list.append(new_list)
 
+# each color represents each lineage
 rainbow = cm.get_cmap('rainbow', len(all_barcode_number_list))
 rainbow_list = rainbow(range(len(all_barcode_number_list)))
 
+# convert the size of each barcode on each timepoint into percentages
 df_all_barcode_number = pd.DataFrame(all_barcode_number_list)
 df_total = df_all_barcode_number.sum(axis=0)
 df_percentage = (df_all_barcode_number/df_total).sort_values(by=0, ascending=False)
 df_percentage_sum = df_percentage.sum(axis=0)
 
+# complexity is the number barcodes that have more than 0 reads in that timepoint
 complexity = df_all_barcode_number[df_all_barcode_number > 0.0].count()
 timepoint = np.arange(6)
 previous_barcode = None
 index = 0
 width = 0.5
-for i_1, i_2 in tqdm(df_percentage.iterrows(), total=df_percentage.shape[0]):
+# produce stacked bar plots
+for i_1, i_2 in df_percentage.iterrows():
     barcode = i_2
     if previous_barcode is None:
         for i in range(5):

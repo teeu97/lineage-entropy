@@ -1,14 +1,17 @@
+"""
+This file produces a sawtooth graph that shows motility of all lineages in different deciles across all timepoints
+"""
+
 import pickle
 import math
-import pandas as pd
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
-from matplotlib.lines import Line2D
 from matplotlib import cm
-from scipy import stats
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -18,14 +21,8 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 16}
 
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -44,10 +41,6 @@ sum_table = table.sum(axis=0)
 normalized_table = table.div(sum_table)
 true_number_table = (normalized_table * normalizing_factor).round()
 
-normalized_table_2 = table.div(sum_table)
-normalizing_factor_2 = [0, 108703, 119310, 173167, 0, 131053, 131434, 100338, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 283972, 297429, 285009, 0, 0, 0, 0, 0, 0, 0, 0, 0, 283771, 310282, 285815, 0, 288557, 329323, 184856]
-true_number_table_2 = (normalized_table_2 * normalizing_factor_2).round()
-
 states = ['s1', 's2', 's3']
 states_coords = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]
 
@@ -63,7 +56,6 @@ bottom_left_coord = (0, 0)
 
 triangle_vertices = np.array([top_right_coord, top_left_coord, bottom_left_coord])
 
-j = 0
 for barcode, row in true_number_table.iterrows():
     barcode_dict = {}
 
@@ -73,8 +65,8 @@ for barcode, row in true_number_table.iterrows():
     barcode_dict['d18_all'], barcode_dict['d18_s1'], barcode_dict['d18_s2'], barcode_dict['d18_s3'] = row[32:36]
     barcode_dict['d24_all'], barcode_dict['d24_s1'], barcode_dict['d24_s2'], barcode_dict['d24_s3'] = row[36:40]
 
-    barcode_summary = {'barcode_id': barcode, 'ternary_coord': [], 'cartesian_coord': [], 'vector': [], 'size': [], 'assigned_state': [],
-                       'total_transition_amount': 0}
+    barcode_summary = {'ternary_coord': [], 'cartesian_coord': [], 'vector': [], 'size': [], 'assigned_state': [],
+                       'total_transition_amount': 0, 'transition_amount': []}
 
     barcode_size = [sum(row[1:4]), sum(row[5:8]), sum(row[21:24]), sum(row[33:36]), sum(row[37:40])]
 
@@ -102,20 +94,41 @@ for barcode, row in true_number_table.iterrows():
             vector = (barcode_summary['cartesian_coord'][i + 1][0] - barcode_summary['cartesian_coord'][i][0],
                       barcode_summary['cartesian_coord'][i + 1][1] - barcode_summary['cartesian_coord'][i][1])
             barcode_summary['vector'].append(vector)
+            barcode_summary['transition_amount'].append(vector_size(vector[0], vector[1]))
             barcode_summary['total_transition_amount'] += vector_size(vector[0], vector[1])
         all_transition_size_list.append(barcode_summary['total_transition_amount'])
         for size in barcode_summary['size']:
             all_size_set.add(round(size, 3))
         all_barcode_list.append(barcode_summary)
-
-    j += 1
-
 all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transition_amount'])
 
-states = ['s1', 's2', 's3']
-for state in states:
-    motility_group = [
-        all_barcode_list[round(j * 20 / 100 * len(all_barcode_list)):round((j + 1) * 20 / 100 * len(all_barcode_list))]['barcode_id']
-        for j in range(5)]
-    print(motility_group)
+barcode_number = len(all_barcode_list)
 
+
+def bar_graph(all_barcode_list, low, high):
+    # each lineage gets a unique color
+    rainbow = cm.get_cmap('rainbow', barcode_number)
+    rainbow_list = rainbow(range(barcode_number))[::-1]
+
+    fig = plt.figure()
+    ax = plt.axes()
+
+    ax.set_ylim(0, 1.45)
+
+    ax.set_xticks([i for i in range(1, 5)])
+    ax.set_xticklabels(['d{} to d{}'.format(i * 6, (i + 1) * 6) for i in range(4)])
+    ax.set_title('{}th to {}th Percentile'.format(round(100 - high), round(100 - low)))
+    ax.set_ylabel('Absolute Transition Amount')
+
+    for index, barcode in enumerate(all_barcode_list):
+        # select some deciles to plot
+        if len(all_barcode_list) * low / 100 <= index <= len(all_barcode_list) * high / 100:
+            plt.plot([i for i in range(1, 5)], barcode['transition_amount'], color=rainbow_list[index])
+
+    fig.tight_layout()
+    fig.savefig("SawToothMotility_EachTimepoint_P{}.svg".format(round(100 - high)), bbox_inches='tight',
+                format='svg', dpi=720)
+
+
+for i in range(10):
+    bar_graph(all_barcode_list, i*100/10, (i+1)*100/10)

@@ -1,9 +1,17 @@
+"""
+This file calculates the estimated growth birth death rate
+"""
+
 import pickle
 import math
-import scipy
 import numpy as np
-
 from numpy.linalg import pinv
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -13,6 +21,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
+# normalize reads 
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90

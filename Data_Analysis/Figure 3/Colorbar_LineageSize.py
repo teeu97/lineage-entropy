@@ -1,12 +1,18 @@
+"""
+This file produces a colorbar that shows lineage size
+"""
+
 import pickle
 import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-
-from tqdm.auto import tqdm
-from matplotlib.lines import Line2D
 from matplotlib import cm
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -16,6 +22,8 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
+
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -101,9 +109,8 @@ for barcode, row in true_number_table.iterrows():
             all_vector_size_set.add(round(size_, 3))
         all_barcode_list.append(barcode_summary)
 
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
 
+# make the colormap
 color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=1, vmax=max(all_size_set)),
                                                    cmap='YlOrRd')
 

@@ -1,12 +1,20 @@
+"""
+This file produces dot plots showing proportion of cells in different states in all timepoint
+"""
+
 import pickle
 import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-
-from tqdm.auto import tqdm
 from matplotlib import cm
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -16,10 +24,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
-matplotlib.rcParams['figure.dpi'] = 1200
-matplotlib.rcParams['figure.figsize'] = (6, 6)
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -105,8 +110,8 @@ for barcode, row in true_number_table.iterrows():
             all_vector_size_set.add(round(size_, 3))
         all_barcode_list.append(barcode_summary)
 
-def scatter_plot_right_each(all_barcode_list):
 
+def scatter_plot_right_each(all_barcode_list):
     color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=1, vmax=max(all_size_set)),
                                                    cmap='YlOrRd')
     for i in range(5):
@@ -118,13 +123,17 @@ def scatter_plot_right_each(all_barcode_list):
         ax.axis('off')
 
         all_barcode_list.sort(key=lambda barcode: barcode['size'][i])
-        for barcode in tqdm(all_barcode_list):
+        # iterate through each barcode
+        for barcode in all_barcode_list:
             cartesian_coord = barcode['cartesian_coord']
             size = barcode['size']
+            # record x and y coordinates
             x_all.append(cartesian_coord[i][0])
             y_all.append(cartesian_coord[i][1])
+            # assign color based on their size
             c_all.append(color_scalarMap.to_rgba(round(size[i], 3)))
 
+        # plot
         ax.scatter(x_all, y_all, c=c_all, marker='.')
         # ax.set_title('Day {}'.format(6*i))
 

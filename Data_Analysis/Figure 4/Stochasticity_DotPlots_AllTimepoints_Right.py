@@ -1,14 +1,21 @@
+"""
+This file producesa dot plot that represents stochasticity of all lineages from all timepoints
+"""
+
 import pickle
 import math
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-
-from tqdm.auto import tqdm
 from matplotlib import cm
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from numpy.linalg import pinv
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 
 def euclidean_distance(coor_1, coor_2):
     return math.sqrt(sum((i - j) ** 2 for i, j in zip(coor_1, coor_2)))
@@ -17,10 +24,6 @@ def euclidean_distance(coor_1, coor_2):
 def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
-
-matplotlib.rcParams['figure.dpi'] = 1200
-matplotlib.rcParams['figure.figsize'] = (6, 6)
-matplotlib.rcParams['font.family'] = "sans-serif"
 
 total_cell_number = 10 ** 8
 
@@ -107,8 +110,8 @@ for barcode, row in true_number_table.iterrows():
             all_vector_size_set.add(round(size_, 3))
         all_barcode_list.append(barcode_summary)
 
-print(len(all_barcode_list))
 
+# calculate timepoint-specific transition matrix using least square estimation
 def least_square_estimation_all_separate_timepoint(all_barcode_list):
     probability_timepoint_list = []
     for timepoint in range(4):
@@ -117,11 +120,13 @@ def least_square_estimation_all_separate_timepoint(all_barcode_list):
         for index, barcode in enumerate(all_barcode_list):
             ternary_coord = barcode['ternary_coord']
             T_0[index] = np.array(ternary_coord[timepoint])
-            T_1[index] = np.array(ternary_coord[timepoint+1])
+            T_1[index] = np.array(ternary_coord[timepoint + 1])
             T_0_t = np.transpose(T_0)
         probability_timepoint_list.append(np.matmul(pinv(np.matmul(T_0_t, T_0)), np.matmul(T_0_t, T_1)))
     return probability_timepoint_list
 
+
+# simulate the steady state behavior
 def steady_state_simulation():
     for timepoint in range(4):
         T_0 = np.zeros((len(all_barcode_list), 3))
@@ -132,6 +137,8 @@ def steady_state_simulation():
     return T_0
 
 
+# calculate the lineage entropy given the state proportion
+# this entropy is between 0 and 1
 def entropy(ternary_coord):
     sum_ = 0
     for index, p in enumerate(ternary_coord):
@@ -146,14 +153,16 @@ def entropy(ternary_coord):
                 sum_ += p_ * np.log10(p_)/np.log10(3)
     return -sum_
 
+
 transitional_prob_list = least_square_estimation_all_separate_timepoint(all_barcode_list)
-steady_state_population = steady_state_simulation().mean(axis = 0)
+steady_state_population = steady_state_simulation().mean(axis=0)
 
 for barcode in all_barcode_list:
     barcode['entropy'] = 0
     for timepoint in range(5):
         barcode['entropy'] += entropy(barcode['ternary_coord'][timepoint])
 
+# plot all scatter plot
 def scatter_plot_right_all(all_barcode_list):
     fig, ax = plt.subplots()
     x_all = []
@@ -162,12 +171,13 @@ def scatter_plot_right_all(all_barcode_list):
     color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0, vmax=1),
                                                    cmap='rainbow')
     all_barcode_list.sort(key=lambda barcode: barcode['entropy'])
-    for barcode in tqdm(all_barcode_list):
+    for barcode in all_barcode_list:
         cartesian_coord = barcode['cartesian_coord']
         ternary_coord = barcode['ternary_coord']
         for i in range(4):
             x_all.append(cartesian_coord[i][0])
             y_all.append(cartesian_coord[i][1])
+            # color is based on their lineage entropy value
             c_all.append(color_scalarMap.to_rgba(round(entropy(ternary_coord[i]), 3)))
 
     ax.scatter(x_all, y_all, c=c_all, marker='.')

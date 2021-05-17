@@ -1,16 +1,16 @@
+"""
+Colorbar_Stochasticity.py produces a colorbar that shows the range of stochasticity
+"""
 import matplotlib
 import matplotlib.pyplot as plt
 
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
 color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=0, vmax=1),
                                                cmap='rainbow')
-
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 16}
-
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
 
 plt.figure()
 plt.axis('off')

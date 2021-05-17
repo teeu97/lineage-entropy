@@ -5,9 +5,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+# initialize a data dict
 data_dict = {'Gene': [], 'Sample': [], 'Mean Fold Expression': [], 'Std Fold Expression': []}
 fold_expression_list = []
 
+# open the file that includes fold induction data from the qPCR machine
 with open('fold_induction_data.csv') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     for index, row in enumerate(csv_reader):
@@ -21,8 +23,10 @@ with open('fold_induction_data.csv') as csv_file:
             data_dict['Std Fold Expression'].append(np.std(fold_expression))
             fold_expression_list.append(fold_expression)
 
+# convert it to dataframe
 data_pd = pd.DataFrame.from_dict(data_dict)
 
+# define labels
 labels = [val for ind, val in enumerate(list(data_pd['Gene'].values)) if ind % 2 == 0]
 x = np.arange(len(labels))  # the label locations
 
@@ -33,11 +37,13 @@ cd24_positive_std = [val for ind, val in enumerate(list(data_pd['Std Fold Expres
 cd24_negative = [val for ind, val in enumerate(list(data_pd['Mean Fold Expression'].values)) if ind % 2 != 0]
 cd24_negative_std = [val for ind, val in enumerate(list(data_pd['Std Fold Expression'].values)) if ind % 2 != 0]
 
+# test significance
 significance_list = []
 for gene in range(len(fold_expression_list) // 2):
     t, p = scipy.stats.ttest_ind(fold_expression_list[2 * gene], fold_expression_list[(2 * gene) + 1])
     significance_list.append(p)
 
+# draw bar graph
 fig, ax = plt.subplots()
 rects1 = ax.bar(x - width / 2, cd24_positive, width, label='CD24+ Cells', yerr=cd24_positive_std)
 rects2 = ax.bar(x + width / 2, cd24_negative, width, label='CD24- Cells', yerr=cd24_negative_std)

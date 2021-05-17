@@ -1,12 +1,18 @@
+"""
+This file produces a vector field for the empirical data
+"""
 import pickle
 import math
 import random
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-
 from matplotlib import cm
-from tqdm.auto import tqdm
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -17,9 +23,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# normalize read data
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -108,17 +112,18 @@ for barcode, row in true_number_table.iterrows():
 
 
 def vector_field_size_weight_shifted_size(all_barcode_list):
-    default_size = 3
+    # colormap - based on barcode size
     color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=1, vmax=max(all_size_set)),
                                                    cmap='YlOrRd')
+    # sort barcode based on size -> biggest lineage is on top of the smallest lineages on the plot
     all_barcode_list.sort(key=lambda barcode: barcode['total_size'])
-    for timepoint in tqdm(range(4)):
-        fig = plt.figure()
+    for timepoint in range(4):
+        plt.figure()
         plt.plot([0, 0], [0, 10], color='black', alpha=0.25)
         plt.plot([0, 10], [10, 10], color='black', alpha=0.25)
         plt.plot([10, 0], [10, 0], color='black', alpha=0.25)
         for barcode in all_barcode_list:
-            if random.random() <= 0.2:
+            if random.random() <= 0.2:  # to make the plot less clutter, only show 20% of the lineages
                 cartesian_coord = barcode['cartesian_coord']
                 vector = barcode['vector']
                 size = barcode['size'][timepoint + 1]

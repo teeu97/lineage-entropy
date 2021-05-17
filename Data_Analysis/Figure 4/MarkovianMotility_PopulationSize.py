@@ -1,7 +1,14 @@
+"""
+This software calculates the Markovianness of each lineage based on their population size:
+
+If the estimated transition matrix cannot precisely predict the state distribution in later timepoints in some of the
+lineages, those lineages are non-markovian.
+
+Otherwise, those lineages are markovian in that timepoint
+"""
+
 import pickle
 import math
-import random
-import csv
 import scipy
 import statsmodels
 import pandas as pd
@@ -12,8 +19,13 @@ import matplotlib
 from matplotlib import cm
 from numpy.linalg import pinv
 from scipy import stats
-from scipy.spatial import distance
 
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
+
+# turn off irrelevent warnings
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
@@ -25,6 +37,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
+# normalize reads
 all_barcode_set = set()
 
 total_cell_number = 10 ** 6
@@ -113,11 +126,12 @@ for barcode, row in true_number_table.iterrows():
 
 all_barcode_list.sort(reverse=True, key=lambda barcode: barcode['total_transition_amount'])
 
-matrix_data_list = [[] for i in range(9)]
-bootstrap_sample_number = round(0.8 * len(all_barcode_list))
-log_count = 0
+# make a list that contains 9 lists inside
+matrix_data_list = [np.empty(0) for i in range(9)]  # store each entry of matrix in a list
+bootstrap_sample_number = round(0.8*len(all_barcode_list))  # sample 80% of the total lineages
+log_count = 0  # keep track of bootstrap iterations
 
-
+# estimate lineage-specific transition matrix
 def least_square_estimation_all_lineage(all_barcode_list):
     probability_lineage_list = []
     for barcode in all_barcode_list:
@@ -128,50 +142,59 @@ def least_square_estimation_all_lineage(all_barcode_list):
             T_0[timepoint] = np.array(ternary_coord[timepoint])
             T_1[timepoint] = np.array(ternary_coord[timepoint + 1])
         T_0_t = np.transpose(T_0)
-        LSE_result = np.matmul(pinv(np.matmul(T_0_t, T_0)), np.matmul(T_0_t, T_1))
         probability_lineage_list.append(np.matmul(pinv(np.matmul(T_0_t, T_0)), np.matmul(T_0_t, T_1)))
     return probability_lineage_list
 
 
 LSE_lineage_specific = least_square_estimation_all_lineage(all_barcode_list)
-p_value_list = [[] for i in range(4)]
-lineage_number_list = [[] for i in range(4)]
-bool_list = []
+p_value_list = [[] for i in range(4)]  # list that contains 4 lists -> each will contain p-values for each timepoint
+# p-value from chi-square test to check if the empirical distribution of cells is significantly different from the
+# simulation
+lineage_number_list = [[] for i in range(4)]  # list that contains 4 lists ->
+# each will contain the index of lineage that can be analyzed (some lineages are not analyzable)
+bool_list = []  # this list will contain a list which represents whether a lineage is non-markovian (TRUE)
+# or markovian (FALSE)
 
+# iterate through each barcode
 for index, barcode in enumerate(all_barcode_list):
-    unqualified_matrix = 0
     p_value_lineage_specific = []
-    transitional_probability = LSE_lineage_specific[index]
+    transitional_probability = LSE_lineage_specific[index]  # lineage specific transition matrix for that timepoint
     for timepoint in range(4):
         probability_lineage_list = []
-
         ternary_coord = barcode['ternary_coord']
         T_0 = np.zeros((1, 3))
         T_1 = np.zeros((1, 3))
         T_0[0] = np.array(ternary_coord[timepoint])
         T_1[0] = np.array(ternary_coord[timepoint + 1])
+        # expected proportion = earlier proportion * transition matrix
         expected_distribution = np.matmul(T_0, transitional_probability)
+        # expected cell distribution = total number of cells * expected proportion
         expected_T_1 = (expected_distribution * barcode['size'][timepoint + 1]).round(0)[0]
         actual_T_1 = np.array(barcode['timepoint_size'][timepoint + 1]).round(0)
+        # put expected cell distributions and empirical cell distributions in a matrix
         matrix = pd.DataFrame([actual_T_1, expected_T_1])
+        # negative number for cell number does not make biological sense -> turn it into 0
         matrix[matrix < 0] = 0
+        # remove columns that are all 0s
         matrix = matrix.loc[:, (matrix != 0).any(axis=0)]
 
+        # if a matrix shape >= 2x2 and not all 0s, perform chi-square test
         if matrix.iloc[1, :].all() and matrix.shape[1] > 1:
             res = scipy.stats.chisquare(matrix.iloc[0, :], matrix.iloc[1, :])
-            p_value_list[timepoint].append(res[1])
-            lineage_number_list[timepoint].append(index)
+            p_value_list[timepoint].append(res[1])  # append p-value
+            lineage_number_list[timepoint].append(index)  # record lineage id
 
+# iterate through each timepoint
 for timepoint in range(4):
+    # initialize a data structure, 'uninformative' is a default unless there is an information that it is not
+    # from the analysis above
     p_value_lineage_list = ['Uninformative' for lineage in all_barcode_list]
     non_markovian_percent_list = []
 
+    # perform Benjamini-Hochberg correction
     l = statsmodels.stats.multitest.multipletests(p_value_list[timepoint], method='fdr_bh')[0]
-    rejected_number = list(l).count(True)
 
-    print(rejected_number, len(p_value_list[timepoint]))
-    non_markovian_percent_list.append(rejected_number / len(p_value_list) * 100)
-
+    # If the test reveals statistical significance, that lineage is Non-Markovian; otherwise, Markovian
     for lineage, p_value in zip(lineage_number_list[timepoint], l):
         if p_value:
             p_value_lineage_list[lineage] = 'Non-Markovian'
@@ -180,28 +203,13 @@ for timepoint in range(4):
 
     bool_list.append(p_value_lineage_list)
 
+# turn the data structure into a dataframe
 df = pd.DataFrame(bool_list)
 df = df.T
 df = df.rename(columns={i: 'D{} to D{}'.format(i*6, (i+1)*6) for i in range(5)})
 
-all_non_markov = 0
-any_non_markov = 0
-all_markov = 0
-all_none = 0
-
-for barcode, row in df.iterrows():
-    non_markov_num = list(row).count('Non-Markovian')
-    markov_num = list(row).count('Markovian')
-    none_num = list(row).count('Uninformative')
-    if non_markov_num > 0:
-        any_non_markov += 1
-    if none_num >= 0 and markov_num == 0 and non_markov_num > 0:
-        all_non_markov += 1
-    if none_num == 4:
-        all_none += 1
-    if none_num >= 0 and markov_num > 0 and non_markov_num == 0:
-        all_markov += 1
-
+# assign different types of lineage (Non-Markovian, Markovian, Uninformative) to some integers
+# for making heatmap
 value_to_int = {value: i for i, value in enumerate(sorted(pd.unique(df.values.ravel())))}
 n = len(value_to_int)
 
@@ -210,6 +218,7 @@ color_list = color(range(9))
 
 cmap = matplotlib.colors.ListedColormap([color_list[i] for i in range(3)])
 
+# make clustermap
 clustermap = sns.clustermap(df.replace(value_to_int), cmap=cmap, cbar_pos=None, col_cluster=False, yticklabels=False,
                             metric='hamming')
 

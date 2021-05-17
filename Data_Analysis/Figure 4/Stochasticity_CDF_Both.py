@@ -1,3 +1,7 @@
+"""
+This file produces the CDF that shows distribution of stochasticity in both Markovian model and coordinated model
+"""
+
 import pickle
 import math
 import random
@@ -5,21 +9,12 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-
-import seaborn as sns
-
 from numpy.linalg import pinv
-from matplotlib import cm
-from scipy import stats
 
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 16}
-
-matplotlib.rc('font', **font)
-matplotlib.rcParams['font.family'] = "sans-serif"
-matplotlib.rcParams['font.sans-serif'] = "Helvetica"
-matplotlib.rcParams['font.family'] = "sans-serif"
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -30,10 +25,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
-matplotlib.rcParams['figure.dpi'] = 1200
-matplotlib.rcParams['figure.figsize'] = (6, 6)
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -65,7 +57,7 @@ top_right_coord = (10, 10)
 top_left_coord = (0, 10)
 bottom_left_coord = (0, 0)
 
-np.seterr(divide='ignore', invalid='ignore')
+np.seterr(divide='ignore', invalid='ignore')  # ignore some of the irrevant errors
 
 triangle_vertices = np.array([top_right_coord, top_left_coord, bottom_left_coord])
 
@@ -122,25 +114,20 @@ for barcode, row in true_number_table.iterrows():
             all_vector_size_set.add(round(size_, 3))
         all_barcode_list.append(barcode_summary)
 
-print(len(all_barcode_list))
 
+# calculate least square estimation for each timepoint
 def least_square_estimation_all_separate_timepoint(all_barcode_list):
     probability_timepoint_list = []
     for timepoint in range(4):
-        P = np.zeros((3, 3))
         T_0 = np.zeros((len(all_barcode_list), 3))
         T_1 = np.zeros((len(all_barcode_list), 3))
-        total_size = 0
-        length = 0
         for index, barcode in enumerate(all_barcode_list):
             ternary_coord = barcode['ternary_coord']
-            size = barcode['size']
             T_0[index] = np.array(ternary_coord[timepoint])
             T_1[index] = np.array(ternary_coord[timepoint + 1])
             T_0_t = np.transpose(T_0)
         probability_timepoint_list.append(np.matmul(pinv(np.matmul(T_0_t, T_0)), np.matmul(T_0_t, T_1)))
     return probability_timepoint_list
-
 
 transitional_prob_list = least_square_estimation_all_separate_timepoint(all_barcode_list)
 
@@ -160,34 +147,40 @@ for index, barcode in enumerate(all_barcode_list):
     heritable_ternary_coord.append(ternary_coord[0])
     monte_cartesian_coord.append(cartesian_coord[0])
     monte_ternary_coord.append(ternary_coord[0])
+
     for timepoint in range(4):
         current_transitional_prob = transitional_prob_list[timepoint]
         new_distribution = [0, 0, 0]
+        # use Monte-carlo simulation to predict the Markovian transition
+        # iterate through each state and each cells
+        # and use random choice to select where each cell is going to transition to
         for j, state in enumerate(current_timepoint_size):
             for cell in range(int(state)):
+                # the probability is weighted by the current distribution of cells
                 new_distribution[random.choices(possible_states, current_transitional_prob[j])[0]] += 1
+        # convert it to ternary and cartesian coordinates
         current_distribution = np.array(new_distribution) / sum(new_distribution)
         monte_ternary_coord.append(current_distribution)
         monte_cartesian_coord.append(list(np.dot(current_distribution, triangle_vertices)))
-        current_timepoint_size = new_distribution
+        current_timepoint_size = new_distribution  # update the distribution
 
+        # simulate the heritable model using monte-carlo simulation
         new_heritable_distribution = [0, 0, 0]
+        # coordinated -> all the cells in the lineage change their states together
         new_heritable_distribution[random.choices(possible_states, heritable_distribution)[0]] += sum(heritable_distribution)
+        # convert it to ternary and cartesian coordinates
         new_heritable_distribution_ternary = np.array(new_heritable_distribution) / sum(new_heritable_distribution)
         heritable_ternary_coord.append(new_heritable_distribution_ternary)
         heritable_cartesian_coord.append(list(np.dot(new_heritable_distribution_ternary, triangle_vertices)))
         heritable_distribution = new_heritable_distribution
 
-    for i in range(4):
-        vector = np.array(monte_cartesian_coord[i+1]) - np.array(monte_cartesian_coord[i])
-        heritable_vector = np.array(heritable_cartesian_coord[i+1]) - np.array(heritable_cartesian_coord[i])
-        barcode['monte_vector'].append(vector)
-        barcode['heritable_vector'].append(heritable_vector)
 
 empirical_stochasticity = {i: [] for i in range(5)}
 simulation_stochasticity = {i: [] for i in range(5)}
 heritable_stochasticity = {i: [] for i in range(5)}
 
+
+# simulate the steady state behavior
 def steady_state_simulation():
     for timepoint in range(4):
         T_0 = np.zeros((len(all_barcode_list), 3))
@@ -198,6 +191,8 @@ def steady_state_simulation():
     return T_0
 
 
+# calculate the lineage entropy given the state proportion
+# this entropy is between 0 and 1
 def entropy(ternary_coord):
     sum_ = 0
     for index, p in enumerate(ternary_coord):
@@ -212,14 +207,18 @@ def entropy(ternary_coord):
                 sum_ += p_ * np.log10(p_)/np.log10(3)
     return -sum_
 
+
+# this function removes the vertical line at the end of CDF
 def fix_hist_step_vertical_line_at_end(ax):
     axpolygons = [poly for poly in ax.get_children() if isinstance(poly, matplotlib.patches.Polygon)]
     for poly in axpolygons:
         poly.set_xy(poly.get_xy()[:-1])
 
+
 transitional_prob_list = least_square_estimation_all_separate_timepoint(all_barcode_list)
 steady_state_population = steady_state_simulation().mean(axis=0)
 
+# iterate through each lineage to collect empirical/simulated/and coordinated stochasticity
 for barcode in all_barcode_list:
     for timepoint in range(5):
         empirical_stochasticity[timepoint].append(entropy(barcode['ternary_coord'][timepoint]))

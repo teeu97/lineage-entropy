@@ -1,14 +1,19 @@
+"""
+This file shows the vector field that comes from the movement of lineages under the Markovian model
+"""
 import pickle
 import math
 import random
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
 from numpy.linalg import pinv
 from matplotlib import cm
-from tqdm.auto import tqdm
+
+__author__ = 'Tee Udomlumleart'
+__maintainer__ = 'Tee Udomlumleart'
+__email__ = ['teeu@mit.edu', 'salilg@mit.edu']
+__status__ = 'Production'
 
 
 def euclidean_distance(coor_1, coor_2):
@@ -19,10 +24,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
-matplotlib.rcParams['figure.dpi'] = 1200
-matplotlib.rcParams['figure.figsize'] = (6, 6)
-matplotlib.rcParams['font.family'] = "sans-serif"
-
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
@@ -110,6 +112,7 @@ for barcode, row in true_number_table.iterrows():
         all_barcode_list.append(barcode_summary)
 
 
+# calculate transition matrix of each timepoint using least square estimation
 def least_square_estimation_all_separate_timepoint(all_barcode_list):
     probability_timepoint_list = []
     for timepoint in range(4):
@@ -123,9 +126,9 @@ def least_square_estimation_all_separate_timepoint(all_barcode_list):
         probability_timepoint_list.append(np.matmul(pinv(np.matmul(T_0_t, T_0)), np.matmul(T_0_t, T_1)))
     return probability_timepoint_list
 
-
 transitional_prob_list = least_square_estimation_all_separate_timepoint(all_barcode_list)
 
+# perform monte-carlo simulation to predict the state transition of lineages
 possible_states = [0, 1, 2]
 for index, barcode in enumerate(all_barcode_list):
     ternary_coord = barcode['ternary_coord']
@@ -154,19 +157,20 @@ for index, barcode in enumerate(all_barcode_list):
 
 
 def vector_field_size_weight_shifted_size(all_barcode_list):
-    default_size = 3
+    # colormap - based on barcode size
     color_scalarMap = matplotlib.cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=1, vmax=max(all_size_set)),
                                                    cmap='YlOrRd')
+    # sort barcode based on size -> biggest lineage is on top of the smallest lineages on the plot
     all_barcode_list.sort(key=lambda barcode: barcode['total_size'])
-    for timepoint in tqdm(range(4)):
-        fig = plt.figure()
+    for timepoint in range(4):
+        plt.figure()
         plt.plot([0, 0], [0, 10], color='black', alpha=0.25)
         plt.plot([0, 10], [10, 10], color='black', alpha=0.25)
         plt.plot([10, 0], [10, 0], color='black', alpha=0.25)
         for barcode in all_barcode_list:
-            if random.random() <= 0.2:
-                cartesian_coord = barcode['monte_cartesian_coord']
-                vector = barcode['monte_vector']
+            if random.random() <= 0.2:  # to make the plot less clutter, only show 20% of the lineages
+                cartesian_coord = barcode['cartesian_coord']
+                vector = barcode['vector']
                 size = barcode['size'][timepoint + 1]
                 x_coord = cartesian_coord[timepoint][0]
                 y_coord = cartesian_coord[timepoint][1]
@@ -180,8 +184,8 @@ def vector_field_size_weight_shifted_size(all_barcode_list):
                           dy / 15 + dy / vector_magnitude, shape='full',
                           head_width=0.1, color=arrow_color, length_includes_head=True)
         plt.axis('off')
-        plt.savefig('VectorField_MonteCarloSimulation_Right_T{}.svg'.format(timepoint), bbox_inches='tight', format='svg',
-                    dpi=720)
+        plt.savefig('VectorField_Empirical_Right_T{}.svg'.format(timepoint), bbox_inches='tight', format='svg',
+                            dpi=720)
 
 vector_field_size_weight_shifted_size(all_barcode_list)
 
