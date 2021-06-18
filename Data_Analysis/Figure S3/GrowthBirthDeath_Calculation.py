@@ -21,7 +21,7 @@ def vector_size(x_displacement, y_displacement):
     return math.sqrt(x_displacement ** 2 + y_displacement ** 2)
 
 
-# normalize reads 
+# normalize reads
 total_cell_number = 10 ** 8
 
 state_1_ratio = 0.90
